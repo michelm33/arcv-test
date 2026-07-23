@@ -1,17 +1,33 @@
 #!/bin/bash
 ###############################################################################
+# Arcv-test
+# 
+# Copyright (c) 2026 Michel MEHL. All rights reserved. 
+# 
+# License terms written down in file LICENSE.txt
+# Release file path: posttest.sh
+# Release file date: 2026-07-23 15:46
+# App version: 1.0.0
+# App source revision: 145
+# App source signature: 116201585e582dd90c97262a28219baec90914d196015114cd40a8fac9612ba5
+# Source file last modification: 2026-07-18 18:47:20.598307586 +0200
 #
-# Arcv posttest script executed by shotplan
-#
-# Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
+# This header was generated. Do not modify.
 #
 # ------------------------------------------------------------------------------
 #
 #
 # ------------------------------------------------------------------------------
-#
-# Report bugs to michel.mehl@slashetc.fr
-#
+# 
+# Report bugs and suggestions: 
+#     assistance@slashetc.fr
+# 
+# Specific or corporate requirements or extensions: 
+#     info@slashetc.fr
+# 
+# The author is overall not required to provide maintenance or support 
+# outside specific commercial terms agreed.
+# 
 ###############################################################################
 
 export DOCKER_REPODIR="$HOME/Archive"
