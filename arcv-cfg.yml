@@ -1,0 +1,7 @@
+container-image: arcv-test-ubuntu26
+container-name: arcv-test-ubuntu26
+container-mnt-repo-path:  /home/michel/riffian/Data/Archive
+container-files: 
+  - dock-install-app 
+  - install_arcv-test.sh 
+  - dock-run-test-app-auto

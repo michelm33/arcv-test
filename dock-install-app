@@ -1,0 +1,51 @@
+#!/bin/bash
+###############################################################################
+#
+# Arcv test bench installer for Docker containers
+#
+# Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
+#
+# ------------------------------------------------------------------------------
+#
+# To update the file in the container:
+#
+#  sudo docker run --rm -it --name arcv-test-ubuntu26 arcv-test-ubuntu26
+#  sudo docker cp ~/riffian/Data/Data/admin/linux/arcv-test/dock-install-app arcv-test-ubuntu26:/home
+#  sudo docker cp ~/riffian/Data/Data/admin/linux/arcv-test/install_arcv.sh arcv-test-ubuntu26:/home
+#  sudo docker commit arcv-test-ubuntu26 arcv-test-ubuntu26 
+# ------------------------------------------------------------------------------
+#
+# Report bugs to michel.mehl@slashetc.fr
+#
+###############################################################################
+APP=arcv
+
+export PATH=/usr/bin/${APP}:/usr/bin/${APP}-test:$PATH
+export PATH=/usr/bin/shell-api:$PATH
+export PATH=/usr/bin/shotplan:$PATH
+export PATH=/usr/bin/utils:$PATH # for correct yq
+
+# Use this if dev version is used
+DEBIAN_FRONTEND="noninteractive" /home/install_arcv-test.sh
+
+# Force --subproc option for not triggering terminal screen clearing
+cfgDir="$HOME/.config/Arcv"
+if [ ! -e "${cfgDir}"  ] ; then
+    mkdir -p "${cfgDir}"
+    echo "arcv config: $HOME/arcv.yml" > "${cfgDir}/arcv.yml"
+fi
+
+echo 'default app options: --subproc' >> "${cfgDir}/arcv.yml"
+
+# When no argument specified leave with a shell, otherwise do not
+if [ $# -eq 0 ] ; then
+
+    echo "Type the following to start running all tests in interactive mode:"
+    echo "  test_arcv --force-defaults -C all -y -T -i"
+    echo
+    echo "Type the following to start running all tests in automatic mode:"
+    echo "  test_arcv --force-defaults -C all -y -T -a"
+
+    # End up by dropping a shell
+    /bin/bash
+fi

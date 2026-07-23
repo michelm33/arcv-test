@@ -1,0 +1,49 @@
+#!/bin/bash
+###############################################################################
+#
+# Arcv tester
+#
+# Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
+#
+# ------------------------------------------------------------------------------
+#
+#
+# ------------------------------------------------------------------------------
+#
+# Report bugs to michel.mehl@slashetc.fr
+#
+###############################################################################
+
+if [ ! -v ARCV_TEST_DIR ] ; then
+    export ARCV_TEST_DIR="/usr/bin/arcv-test"
+fi
+
+if [ ! -d "${ARCV_TEST_DIR}" ] ; then
+    echo "Error: ARCV_TEST_DIR=${ARCV_TEST_DIR} does not exist. Please set ARCV_TEST_DIR to a valid path" >&2
+    exit -1
+fi
+
+if [ ! -v ARCV_DIR ] ; then
+    export ARCV_DIR="/usr/bin/arcv"
+    export SHELLAPI_DIR="/usr/bin/shell-api"
+    export SHOTPLAN_DIR="/usr/bin/shotplan"
+fi
+
+if [ ! -d "${ARCV_DIR}" ] ; then
+    echo "Error: ARCV_DIR=${ARCV_DIR} does not exist. Please set ARCV_DIR to a valid path" >&2
+    exit -1
+fi
+
+
+# Ensure the correct executable is used
+export PATH="${ARCV_DIR}:$PATH"
+export PATH="${SHELLAPI_DIR}:$PATH"
+export PATH="${SHOTPLAN_DIR}:$PATH"
+
+#source "${ARCV_TEST_DIR}/local_test_vars.sh"
+#local distro=$(lsb_release -a|awk -F ' ' '/^Description:/{printf ("%s-%s",$2,$3)}') 2>/dev/null
+SYSENV="$(uname -srm)"
+reportFile="test-report-arcv-$(arcv --version-num)-$(arcv --revision)-$(date +'%Y%m%d_%H%M')-${SYSENV}.txt"
+shotplan "${ARCV_TEST_DIR}/shotplan.yml" $* | tee "${reportFile}"
+
+

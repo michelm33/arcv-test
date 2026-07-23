@@ -1,0 +1,27 @@
+Testing with reporting (screenshots)
+
+   $ arcv-test --report 
+
+Testing without reporting
+
+   $ arcv-test --T
+
+Testing starting from a certain plan, use option --from, e.g
+
+   $ arcv-test --from-init
+
+To run dev versions, set ARCV_DIR to the source folder, e.g.
+
+  # Put your test case description here
+   $ export ARCV_DIR="\$HOME/riffian/Data/Data/admin/linux/arcv"
+
+To test release version inside a docker
+
+  # ON HOST: this starts container and release package are auto installed
+   $ arcv-test --C
+
+  # INSIDE CONTAINER execute actual shot plan in interactive mode
+   $ test_arcv --force-defaults -C all -y -T -i
+
+  # INSIDE CONTAINER execute actual shot plan in automatic mode
+   $ test_arcv --force-defaults -C all -y -T -a

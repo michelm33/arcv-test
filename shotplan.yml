@@ -1,0 +1,1727 @@
+###############################################################################
+#
+# Arcv
+#
+# Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
+#
+# ------------------------------------------------------------------------------
+#
+# This file contains the test plan for Arcv which can be used in
+# the following ways depending on the option passed to the plan processor shotplan.sh:
+#
+# - without any option among those described below:
+#        For generating document parts for the online documentation 
+#        and generating test reports.
+#        An individual plan or a set of plans of a given category or 'all' can be selected.
+#
+# - with option '-T|no-report': 
+#        For running tests only, part of them being automatic and other manual.
+#        An individual plan or a set of plans of a given category or 'all' can be selected.
+#
+# - with option '-M|--manpage' :
+#        For generating the example lines for the manpage
+#
+# - with option '--cat' :
+#        List available categories
+#
+#
+#  When the tests are run to generate document parts and images, shotplan must run
+#  on the host where the images are stored. The following parameters shall be valid
+#  path on the target host where the tests are run:
+#
+#  image_folder
+#  image_folder2
+#  output-dir
+#
+# ------------------------------------------------------------------------------
+#
+# Report bugs to michel.mehl@slashetc.fr
+#
+###############################################################################
+
+#
+#
+# TODO when generating for online the name of the category shall be generated instead of the chapter name
+# make a mapping between logical category names and readable names
+#
+#
+
+# To find window is, type 'wmctrl -lp' and search the windows with matching title
+application: arcv
+application_exedir_envvar: ARCV_DIR
+testbench: arcv-test
+
+release: yes
+lang: "EN.US.UTF-8"
+window_id: "0x026055ae"
+# ! Please ensure these folders are created before starting the plan
+image_folder: /home/michel/siteweb/developertoolsforlinux/images/arcv/
+image_folder2: /home/michel/siteweb.output/photolib/developertoolsforlinux/images/bank/original/static/
+#image_folder2: /home/michel/siteweb.output/output/developertoolsforlinux/images/bank/original/static/
+output-dir: /home/michel/siteweb/developertoolsforlinux/pages/arcv/shotplan
+
+term-height: 70
+term-width: 150
+environment: |
+
+  - Ensure to put "default app options: "--subproc" in /home/michel/.config/Arcv/arcv.yml to deactivate Term__clear from arcv
+  - For the sake of the test, an existing repository of riffian is used and is accessed via NFS.
+
+pretest-script: pretest.sh
+posttest-script: posttest.sh
+
+shotplan:
+
+  inspect_init:
+    _categories: ["arcv-command-line", "automatic"]
+    _title: |
+      Inspection of internal data after init
+    _usage: |
+          arcv 
+    _ignore-for-manpage: yes
+    1:
+      name: Inspecting of internal revision files when putting a local source folder under version control
+      pre-command: |
+          ?source pretest.sh recreate
+          ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+
+      command-display : | 
+        arcv
+      command : | 
+        arcv -yy --silent
+      post-command-display:
+      post-command: |
+        ?echo 
+        ?echo "Inspecting repository revision folder"
+        #?Test__assertFileContent "${REPODIR}/test-project.archive/ROOT" "$(hostname)/10-65-30-39-a9-3c: $HOME/test-arcv/test-project"
+        ?Test__assertFileContainsLine "${REPODIR}/test-project.archive/ROOT" "$(hostname)/$(Net__MAC| sed 's/:/-/g'): $HOME/test-arcv/test-project"
+        ?Test__assertFileContent ${REPODIR}/test-project.archive/head/REV "0"
+        ?Test__assertFileContent ${REPODIR}/test-project.archive/test-project.archive0/CHANGE_LOG "Creation"
+
+        ?echo 
+        ?echo "Inspecting head folder"
+        ?Test__assertSameFiles "between head folder and revision folder" ${REPODIR}/test-project.archive/head/test-project/file_A.txt ${REPODIR}/test-project.archive/test-project.archive0/test-project/file_A.txt 
+        ?Test__assertSameFiles "between head folder and revision folder" ${REPODIR}/test-project.archive/head/test-project/file_B.txt ${REPODIR}/test-project.archive/test-project.archive0/test-project/file_B.txt
+        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/test-project.archive/head/test-project/file_A.txt $HOME/test-arcv/test-project/file_A.txt
+        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/test-project.archive/head/test-project/file_B.txt $HOME/test-arcv/test-project/file_B.txt
+
+        ?echo 
+        ?echo "Adding file_C.txt"
+        ?echo "This is file C" > "file_C.txt"
+        ?echo
+        ?av --silent -yy
+
+        ?cleanupFunProjectDirs
+        ?echo 
+        ?echo "Creating branch fun-project"
+        av --silent -yy branch fun-project
+        
+        ?echo 
+        ?echo "Inspecting branch revision folder"
+        ?Test__assertFileContent ${REPODIR}/fun-project.archive/BRANCH_ROOT "$HOME/tmp/arcv-test-archive/test-project.archive"
+        ?Test__assertFileContent ${REPODIR}/fun-project.archive/BRANCH_ROOT_REV "1"
+        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_A.txt $HOME/test-arcv/test-project/file_A.txt
+        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_B.txt $HOME/test-arcv/test-project/file_B.txt
+        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_C.txt $HOME/test-arcv/test-project/file_C.txt
+
+        ?cleanupTestSourceDir
+      comment: |
+        A new source folder is created with 2 files A, B. The folder is put under version control.
+        Then, the internal revision data files are inspected for correctness: ROOT, REV and CHANGE_LOG. 
+        It is checked that the head files matches both those of source folder and the first archived revision.
+        Then, a new revision is created for including a file C. 
+        The project dir is branched and the following files are checked: BRANCH_ROOT and BRANCH_ROOT_REV. BRANCH_ROOT_REV shall contain "1"
+       
+  spacechars:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Wide range of tests dealing with path components containing spaces
+    _usage: |
+          arcv [ -y ]
+    1:
+      name: Wide range of tests dealing with path components containing spaces 
+      pre-command: |
+          ?source pretest.sh
+          ?recreateTestSourceDirWithSpaces
+          ?sleep 1
+          ?Test__assertChangeDir "$HOME/test-arcv/test project of mine"
+          ?ls -lR .
+          ?echo
+      command-display : | 
+          arcv 
+      command : | 
+          arcv -yy --silent
+      post-command-display:
+      post-command: |
+        ?Test__assertCmd "av rev" "0"
+        ?Test__assertCmdExit 0 "av check"
+        ?av -yy pub -m "Release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+
+        ?echo 
+        ?echo "Inspecting repository revision folder"
+        ?Test__assertFilesShouldExist "${REPODIR}/test project of mine.archive/ROOT"
+        ?Test__assertFileContent "${REPODIR}/test project of mine.archive/head/REV" "1"
+        ?Test__assertFileContent "${REPODIR}/test project of mine.archive/test project of mine.archive0/CHANGE_LOG" "Creation"
+
+        ?echo 
+        ?echo "Inspecting head folder"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file A.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive0/test project of mine/file A.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file B.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive0/test project of mine/file B.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config1.yml" "${REPODIR}/test project of mine.archive/test project of mine.archive0/test project of mine/system configs/sys config1.yml"
+
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file A.txt" "$HOME/test-arcv/test project of mine/file A.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file B.txt" "$HOME/test-arcv/test project of mine/file B.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config1.yml" "$HOME/test-arcv/test project of mine/system configs/sys config1.yml"
+
+        ?echo 
+        ?echo "Adding file C.txt and system configs/sys config2.yml, modifying system configs/sys config1.yml, removing system configs/sys config3.yml"
+        ?echo "This is file C" > "file C.txt"
+        ?echo "param1: 200" > "system configs/sys config2.yml" || _exit -1 "failed to create sys config2.yml" 
+        ?echo "param1: 101" >> "system configs/sys config1.yml" || _exit -1 "failed to modify sys config1.yml"         
+        rm  "system configs/sys config3.yml"
+        ?Test__assertCmdExit 1 "av check"
+        av check --verbose
+        ?av --silent -yy
+        ?Test__assertCmd "av rev" "2"
+        ?Test__assertCmdExit 0 "av check"
+        ?Test__assertCmdExit 0 "av diff 0vs0"
+        ?Test__assertCmdExit 0 "av diff 2vs2"
+        ?Test__assertCmdExit 0 "av diff headvs2"
+        ?echo 
+        ?mkdir "/tmp/test av"
+        av tarball -o "/tmp/test av"
+        ?Test__assertFilesShouldExist "/tmp/test av/test project of mine-2.tar.gz"
+        ?tar tvfz "/tmp/test av/test project of mine-2.tar.gz"
+        ?rm "/tmp/test av/test project of mine-2.tar.gz"
+        ?echo 
+        av tarball 0 -o "/tmp/test av"
+        ?Test__assertFilesShouldExist "/tmp/test av/test project of mine-0.tar.gz"
+        ?tar tvfz "/tmp/test av/test project of mine-0.tar.gz"
+        ?rm "/tmp/test av/test project of mine-0.tar.gz"
+        ?echo 
+        ?echo "Perform some info display commands"
+        av check --verbose
+        av log -n --verbose
+        av hash --verbose
+        av list --verbose
+        av diff 0
+        if [ ! -f /.dockerenv ] ; then av meld 2vs0; fi
+        ?echo 
+        ?echo "Inspecting changes"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/file C.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config2.yml" "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/system configs/sys config2.yml"
+
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "$HOME/test-arcv/test project of mine/file C.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config2.yml" "$HOME/test-arcv/test project of mine/system configs/sys config2.yml"
+
+        ?Test__assertFileLastLine "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/system configs/sys config1.yml" "param1: 101"
+
+        # BRANCHING test
+        ?cleanupFunProjectDirsWithSpaces
+        ?echo 
+        ?echo "Creating branch 'fun project'"
+        av --silent -yy branch "fun project"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/fun project.archive/head/fun project/file A.txt" "${REPODIR}/fun project.archive/fun project.archive0/fun project/file A.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/fun project.archive/head/fun project/file B.txt" "${REPODIR}/fun project.archive/fun project.archive0/fun project/file B.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/fun project.archive/head/fun project/file C.txt" "${REPODIR}/fun project.archive/fun project.archive0/fun project/file C.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/fun project.archive/head/fun project/system configs/sys config1.yml" "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/sys config1.yml"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/fun project.archive/head/fun project/system configs/sys config2.yml" "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/sys config2.yml"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/sys config3.yml"
+        ?Test__assertFilesShouldNotExist  "${REPODIR}/fun project.archive/head/fun project/system configs/sys config3.yml"
+
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun project.archive/head/fun project/file A.txt" "$HOME/test-arcv/fun project/file A.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun project.archive/head/fun project/file B.txt" "$HOME/test-arcv/fun project/file B.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun project.archive/head/fun project/file C.txt" "$HOME/test-arcv/fun project/file C.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun project.archive/head/fun project/system configs/sys config1.yml" "$HOME/test-arcv/fun project/system configs/sys config1.yml"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun project.archive/head/fun project/system configs/sys config2.yml" "$HOME/test-arcv/fun project/system configs/sys config2.yml"
+
+
+        # Now perform a checkout tests
+        ?echo
+        ?echo "Checking out rev 0 in '/tmp/test av'"
+        ?av co 0 -y -o "/tmp/test av"
+        ?Test__assertChangeDir "/tmp/test av/test project of mine-rev0"
+        ?Test__assertFileContent "file A.txt" "Test file A"
+        ?Test__assertFileContent "file B.txt" "Test file B"
+        ?Test__assertFileContent "system configs/sys config1.yml" "param1: 100"
+        ?Test__assertFileContent "system configs/sys config3.yml" "param1: 300"
+        ?Test__assertFilesShouldNotExist "file C.txt" 
+        ?Test__assertFilesShouldNotExist "system configs/sys config2.yml" 
+
+        # Go back to original source dir for checkouts
+        ?Test__assertChangeDir "$HOME/test-arcv/test project of mine"
+        ?echo
+        ?echo "Checking out release 1.0.0 in '/tmp/test av'"
+        ?av co R1.0.0 -y -o "/tmp/test av"
+        ?Test__assertChangeDir "/tmp/test av/test project of mine-R1.0.0"
+        ?Test__assertFileContent "file A.txt" "Test file A"
+
+        ?echo
+        ?echo "Checking out revision 1 in '/tmp/' using explicit source name"
+        ?av co 1 -y --source="test project of mine" -o "/tmp/"
+        ?Test__assertChangeDir "/tmp/test project of mine-rev1"
+        ?Test__assertFilesShouldExist "VERSION.txt" 
+        ?Test__assertFilesShouldNotExist "system configs/sys config2.yml" 
+        ?Test__assertFilesShouldExist "system configs/sys config3.yml" 
+        ?Test__assertFileContent "file A.txt" "Test file A"
+        ?Test__assertFileLastLine "system configs/sys config1.yml" "param1: 100"
+
+        # Go to /tmp and perform a checkout from an explicit source
+        ?Test__assertChangeDir "/tmp/"
+        ?echo
+        ?echo "Checking out head in '/tmp/' using explicit source name"
+        ?av co -y --source="test project of mine"
+        ?Test__assertChangeDir "/tmp/test project of mine"
+        ?Test__assertFilesShouldExist "VERSION.txt" 
+        ?Test__assertFilesShouldExist "system configs/sys config2.yml" 
+        ?Test__assertFilesShouldNotExist "system configs/sys config3.yml" 
+        ?Test__assertFileContent "file A.txt" "Test file A"
+        ?Test__assertFileLastLine "system configs/sys config1.yml" "param1: 101"
+
+        ?cleanupFunProjectDirsWithSpaces
+        ?cleanupTestSourceDirWithSpaces
+        ?rm -r "/tmp/test project of mine" &>/dev/null || true
+        ?rm -r "/tmp/test project of mine-rev1" &>/dev/null || true
+        ?rm -r "/tmp/test av" &>/dev/null || true
+
+      comment: |
+        This test initiates a simple revision control, requests to show the revision, the log message.
+        In detail:
+          - A new source folder 'test project of mine' is created with 2 files 'file A.txt' and 'file B.txt' and the files 'sys config1.yml' and 'sys config3.yml' below a folder 'system configs'. 
+          - The folder is put under version control: revision 0
+          - A release is created thereby creating VERSION.txt: revision 1
+          - Then, the internal revision data files are inspected for correctness: ROOT, REV and CHANGE_LOG. 
+          - It is checked that all checked in files are matching between head and both source folder and first archived revision.
+          - Adding file C.txt and system configs/sys config2.yml, adding line 'param1: 101' to  system configs/sys config1.yml, removing system configs/sys config3.yml
+          - Some diff operations are done between various revision which should show not diff (0vs0, 2vs2, headvs2)
+          - tarball exports are tested for rev 0 and 2
+          - Some info display commands are performed: verbose check, log, hash, list and diff between head and rev 0
+          - It is checked that all checked in files are matching between head and both source folder and second archived revision.
+          - Then branching tests are done. Branch "fun project" is created
+          - It is checked that all checked in files are matching between head and both source folder and first archived revision.
+          - Then various checkout tests are done, whereby mainly file presence or not is checked : file A.txt (content), sys config1.yml (last line), sys config2.yml, sys config3.yml
+
+  exclusions:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Exclude some types of files from revision control and related operations
+    _usage: |
+          arcv [ -y ]
+    1:
+      name: Example of excluding some types of files from revision control and related operations
+      pre-command: |
+          ?source pretest.sh
+          ?recreateTestSourceDirWithSpaces
+          ?sleep 1
+          ?Test__assertChangeDir "$HOME/test-arcv/test project of mine"
+          ?echo "dummy video file" > videofile.mp4
+          ?echo "dummy image file in subdir" > "system configs/screenshot.jpg"
+          ?ls -lR .
+          ?echo
+      command-display : | 
+          arcv 
+      command : | 
+          # At commit, enter as exclusions: *.mp4,*.jpg 
+          arcv -y --silent -X "*.mp4,*.jpg "
+      post-command-display:
+      post-command: |
+        ?Test__assertCmd "av rev" "0"
+
+        ?echo 
+        ?echo "Inspecting repository for non existing excluded files" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive0/test project of mine/videofile.mp4"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive0/test project of mine/system configs/screenshot.jpg"        
+        ?Test__assertCmdExit 0 "av check"
+
+        ?echo 
+        ?echo "Adding another_videofile.mp4 and system configs/another_screenshot.jpg and performing a check"
+        ?echo "another dummy video file" > "another_videofile.mp4"
+        ?echo "another dummy image file in subdir" > "system configs/another_screenshot.jpg"
+        av check --verbose
+        ?Test__assertCmdExit 0 "av check" # Since mp4 and jpg are excluded, no change should be reported
+        #OLD: ?Test__assertCmdExit 2 "av check" # Should tell image up-to-date but there's no content change subject under revision control
+        #OLD av --silent -yy -m "Hash update"
+        #OLD ?Test__assertCmdExit 0 "av check"
+
+        ?echo "Adding file C.txt and system configs/sys config2.yml, modifying system configs/sys config1.yml, removing system configs/sys config3.yml"
+        ?echo "This is file C" > "file C.txt"
+        ?echo "param1: 200" > "system configs/sys config2.yml" || _exit -1 "failed to create sys config2.yml" 
+        ?echo "param1: 101" >> "system configs/sys config1.yml" || _exit -1 "failed to modify sys config1.yml"         
+        rm  "system configs/sys config3.yml"
+        ?Test__assertCmdExit 1 "av check" # OK there are changes
+
+        av check --verbose
+        ?av --silent -yy
+
+        ?Test__assertCmdExit 0 "av check"
+        ?Test__assertCmd "av rev" "1"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/videofile.mp4"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/system configs/screenshot.jpg"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/another_videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/another_screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/another_videofile.mp4"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/system configs/another_screenshot.jpg"
+
+        av co 1 -o /tmp -y
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash '/tmp/test project of mine-rev1'"
+
+        ?Test__assertCmdExit 0 "av diff 0vs0"
+        ?Test__assertCmdExit 0 "av diff 1vs1"
+        ?Test__assertCmdExit 0 "av diff headvs1"
+        ?echo 
+        ?echo "Perform some diffs"
+        av diff 0
+        ?echo 
+        ?echo "Inspecting changes"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive1/test project of mine/file C.txt"
+        ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config2.yml" "${REPODIR}/test project of mine.archive/test project of mine.archive1/test project of mine/system configs/sys config2.yml"
+
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "$HOME/test-arcv/test project of mine/file C.txt"
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/test project of mine.archive/head/test project of mine/system configs/sys config2.yml" "$HOME/test-arcv/test project of mine/system configs/sys config2.yml"
+
+        ?Test__assertFileLastLine "${REPODIR}/test project of mine.archive/test project of mine.archive1/test project of mine/system configs/sys config1.yml" "param1: 101"
+
+        # BRANCHING test
+        ?cleanupFunProjectDirsWithSpaces
+        ?echo 
+        ?echo "Creating branch 'fun project'"
+        av --silent -yy branch "fun project"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/sys config3.yml"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/head/fun project/system configs/sys config3.yml"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/head/fun project/videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/head/fun project/system configs/screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/videofile.mp4"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/screenshot.jpg"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/head/fun project/another_videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/head/fun project/system configs/another_screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/another_videofile.mp4"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/fun project.archive/fun project.archive0/fun project/system configs/another_screenshot.jpg"
+
+        # Now perform a checkout tests (not of branch of current dir 'test project of mine')
+        ?echo
+        ?echo "Checking out rev 0 in '/tmp/test av'"
+        ?mkdir "/tmp/test av" &>/dev/null
+        ?av co 0 -y -o "/tmp/test av"
+        ?Test__assertChangeDir "/tmp/test av/test project of mine-rev0"
+
+        ?Test__assertFileContent "file A.txt" "Test file A"
+        ?Test__assertFileContent "file B.txt" "Test file B"
+        ?Test__assertFileContent "system configs/sys config1.yml" "param1: 100"
+        ?Test__assertFileContent "system configs/sys config3.yml" "param1: 300"
+        ?Test__assertFilesShouldNotExist "file C.txt" 
+        ?Test__assertFilesShouldNotExist "system configs/sys config2.yml" 
+
+        # Added checks for exclusion
+        ?Test__assertFilesShouldNotExist "videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "system configs/screenshot.jpg" 
+
+        # Go to /tmp and perform a checkout from an explicit source
+        ?Test__assertChangeDir "/tmp/"
+        ?echo
+        ?echo "Checking out head in '/tmp/' using explicit source name"
+        ?av co -y --source="test project of mine"
+        ?Test__assertChangeDir "/tmp/test project of mine"
+        ?Test__assertFilesShouldExist "system configs/sys config2.yml" 
+        ?Test__assertFilesShouldNotExist "system configs/sys config3.yml" 
+        ?Test__assertFileContent "file A.txt" "Test file A"
+        ?Test__assertFileLastLine "system configs/sys config1.yml" "param1: 101"
+
+        # Added checks for exclusion
+        ?Test__assertFilesShouldNotExist "videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "system configs/screenshot.jpg" 
+        ?Test__assertFilesShouldNotExist "another_videofile.mp4" 
+        ?Test__assertFilesShouldNotExist "system configs/another_screenshot.jpg" 
+
+        ?cleanupFunProjectDirsWithSpaces
+        ?cleanupTestSourceDirWithSpaces
+        ?rm -r "/tmp/test project of mine" &>/dev/null || true
+        ?rm -r "/tmp/test av/test project of mine-rev0" &>/dev/null || true
+        ?rm -r "/tmp/test av" &>/dev/null || true
+
+      comment: |
+        This tests initiates a revision control and performs commits involving excluded files.
+        In detail:
+          - The source file tree which is created is the same as in the test 'spacechars', except there are 2 files .mp4 and .jpg created which should be excluded at init
+          - The folder is put under version control: revision 0
+          - It is checked that the excluded files are not part neither in the head rev (repo side), nor in first archived revision.
+          - Another pair of excluded files with similar extensions are added. The av check should still be 0. 
+          - NOTE: unlike tests 'spacechars', no release is created and revision 1 pertains to the hash cleanup
+          - Revision 1: Adding file C.txt and system configs/sys config2.yml, adding line 'param1: 101' to  system configs/sys config1.yml, removing system configs/sys config3.yml
+          - It is checked that all excluded files (including the last added ones) are not part neither in the head rev (repo side), nor in first archived revision.
+          - The diff operations 0vs0, 1vs1 and headvs1 should show no changes
+          - NOTE: unlike tests 'spacechars', no tarball tests are carried out
+          - Then branching tests are done. Branch "fun project" is created
+          - It is checked that all excluded files (including the last added ones) are not part neither in the head rev (repo side), nor in first archived revision.
+          - Then various checkout tests are done, whereby mainly file presence or not is checked : file A.txt (content), sys config1.yml (last line), sys config2.yml, sys config3.yml
+          - It is checked that all excluded files are not part of the checked out folders.
+
+  init:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Initiate a revision control 
+    _usage: |
+          arcv [ -y ]
+    1:
+      name: Example of putting a source folder under revision control
+      pre-command: |
+          ?source pretest.sh recreate
+          ?sleep 1
+          ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+          ls -l .
+          ?echo
+      command-display : | 
+          arcv 
+      command : | 
+          arcv -yy
+      post-command-display:
+      post-command: |
+        ?Test__assertCmd "av rev" "0"
+        ?echo
+        av rev  
+        ?echo
+        av log  
+        ?echo
+        av log --verbose  
+        ?echo
+        av  
+      comment: |
+        This test initiates a simple revision control, requests to show the revision, the log message.
+        In detail:
+          - A new source folder 'test-arcv/test-project' is created with 2 files file_A.txt and file_B.txt. 
+          - The folder is put under version control. 
+          - Then, the following checks are done: current revision number, short and long revision log.
+          - Eventually, arcv is called as check-in request to check no change is indeed detected.
+
+  # History at this point
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  addfiles:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check-in a new file
+    _usage: |
+          arcv [ -m <commit message> ]
+    1:
+      name: Example of check-in of a new file
+      pre-command: |
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        echo "This is a new test report" > "test_report.txt"
+        ?echo
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?echo
+      command : | 
+          arcv -y -m "added test report" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?echo
+        arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?Test__assertCmd "av rev" "1"
+        ?echo
+        av log  
+        ?echo
+        ?echo "Inspecting repository revision folder"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive1/test-project/file_A.txt"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive1/test-project/file_B.txt"
+        ?Test__assertFileContent "${REPODIR}/test-project.archive/test-project.archive1/test-project/test_report.txt" "This is a new test report"
+
+        av rev  
+        av log --verbose  
+      comment: |
+        In the continuation of 'init' test, a new file 'test_report.txt' is checked in, verifying the revision and log messages. The repo content is inspected. 
+        In detail:
+          - The new file is created and it is checked that the "check" command detects it.
+          - Then the file is checked in.
+          - Before and after check-in, the folder is checked for modification using 'check' command.
+          - At the end, the following is checked : current revision number, revision log
+          - The revision folder created for revision 1 is inspected: only the test report file was copied there and there is neither file A nor file B.
+
+  # History at this point
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  removefiles:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check-in a file for deletion
+    _usage: |
+          arcv [ -m <commit message> ]
+    1:
+      name: Example of check-in a new file for deletion 
+      pre-command: |
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        rm file_A.txt
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?echo
+      command : | 
+          arcv -y -m "Removed file A" 
+      post-command-display:
+      post-command: |
+        ?echo
+        arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?Test__assertCmd "av rev" "2"
+        ?echo 
+        ?echo "Inspecting repository revision folder"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/file_A.txt"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/file_B.txt"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/test_report.txt"
+        ?Test__assertFileContent "${REPODIR}/test-project.archive/test-project.archive2/DROPPED" "- test-project/file_A.txt"
+        ?echo          
+        av rev  
+        ?echo
+        av log --verbose  
+      comment: |
+        In the continuation of 'addFiles' test, a file is removed, verifying the revision and log messages. The repo content is inspected. 
+        In detail:
+          - file_A.txt is removed and the folder is checked in. 
+          - Before and after check-in, the folder is checked for modification using 'check' command.
+          - The following is checked : current revision number, revision log
+          - It is checked that none of the files was copied into the archive revision folder.
+          - The internal DROPPED file is correct.
+
+  # History at this point
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  modifyfiles:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check-in a modified file
+    _usage: |
+          arcv [ -m <commit message> ]
+    1:
+      name: Example of check-in of a modified file
+      pre-command: |
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        #?cat "test_report.txt"
+        echo "Test result is OK" >> "test_report.txt"
+        ?echo
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?echo
+      command : | 
+        arcv -y -m "Update report with test result"
+      post-command-display:
+      post-command: |
+        ?echo
+        arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?Test__assertCmd "av rev" "3"
+
+        ?echo 
+        ?echo "Inspecting repository revision folder"
+        ?Test__assertFileLastLine  "${REPODIR}/test-project.archive/test-project.archive3/test-project/test_report.txt" "Test result is OK"
+
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive3/test-project/file_A.txt"
+        ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive3/test-project/file_B.txt"
+        ?echo
+        av rev  
+        ?echo
+        av log --verbose  
+      comment: |
+        In the continuation of 'removefiles' test, a line is added to the previously added report 'test_report.txt', verifying the revision and log messages. The repo content is inspected. 
+        In detail:
+          - Before and after check-in, the folder is checked for modification using 'check' command.
+          - During check-in, a menu is proposed to select the modified file.
+          - When pressing <enter>, the changes can be checked with meld tool.
+          - At the end, the following is checked : current revision number, revision log.
+          - It is checked that only the test report file was copied into the archive revision folder, not file A and B.
+
+  # History at this point : UNCHANGED
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  checkoutrev:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a revision
+    _usage: |
+          arcv co <revision> -o <output folder>
+    1:
+      name: Example of check-out of a revision
+      pre-command: |
+          ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+          ?arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+          ?echo
+      command : | 
+          av co 0 -o /tmp
+      post-command-display:
+      post-command: |
+        ?echo
+        ?ls /tmp/test-project-rev0
+        ?Test__assertChangeDir "/tmp/test-project-rev0"
+        ?Test__assertFileContent "file_A.txt" "Test file A"
+        ?Test__assertFileContent "file_B.txt" "Test file B"
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?echo
+        ?arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?rm -r /tmp/test-project-rev0 &>/dev/null || true
+      comment: |
+        In the continuation of 'modifyfiles' test, the revision 0 of 'test-project' is checked out in /tmp.
+        The following is checked: folder content and file contents.
+        Before and after check-out, it is checked the folder was not changed anyhow during the checkout.
+
+  # History at this point : UNCHANGED
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  checkoutfile:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a file from head revision to restore it after modification
+    _usage: |
+          arcv co <filename>
+    1:
+      name: Example of restoring a modified file from head revision
+      pre-command: |
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"          
+        cat "test_report.txt"
+        echo "Line with errors" >> "test_report.txt"
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?Test__assertFileLastLine "test_report.txt" "Line with errors" 
+        ?echo
+      command : | 
+          arcv -y co "test_report.txt"
+      post-command-display:
+      post-command: |
+        ?echo
+        ?Test__assertCmd "av rev" "3"
+        ?Test__assertFileLastLine "test_report.txt" "Test result is OK"
+        ?echo
+        arcv co "test_report.txt" 
+        ?echo
+        ?arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?echo
+        ?Test__assertFileLastLine "test_report.txt" "Test result is OK"
+        
+        # NOTE: the modified file contains date and time, which makes it hard to test here
+        #?Test__assertFileLastLine "${REPODIR}/test-project.archive/dropped/.#modified.3.test_report.txt" "Line with errors"
+      comment: |
+        In the continuation of 'checkoutrev' test, a modified 'test_report.txt' is restored via checkout and the repo content is inspected. 
+        In detail:
+          - 'test_report.txt' is extended with an extra line.
+          - It is then restored from the head revision.
+          - The restored file content is checked for correctness. 
+          - It is checked the expected backup file was created for the dropped file.
+          - An attempt to restore it a second time is done to check that file is  up-to-date.
+
+  # History at this point : UNCHANGED
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  checkoutfilefromrev:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a file from a specific revision
+    _usage: |
+      arcv co <filename>:<revision>
+    1:
+      name: Example of check-out of a modified file from a random revision
+      pre-command: |
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"          
+        cat "test_report.txt"
+        ?echo
+        ?echo "Restoring revision 1 containing only first line"
+      command : | 
+          arcv -y co "test_report.txt:1"
+      post-command-display:
+      post-command: |
+        ?echo
+        ?Test__assertFileLastLine "test_report.txt"  "This is a new test report"
+        ?echo
+        ?echo "Testing checkout scenario with invalid revision numbers"
+        ?arcv -y co "test_report.txt:0" &>/dev/null && _exit -1 echo "Rev 0 checked out but does not exist!" || echo "OK it was detected revision 0 does not exist for the file"
+        ?echo
+        ?arcv -y co "test_report.txt:100" &>/dev/null && _exit -1 echo "Rev 100 checked out but does not exist!" || echo "OK it was detected revision 100 does not exist for the file"
+        ?echo
+        ?echo "Restoring back head revision containing the 2 lines"
+        arcv -y co "test_report.txt" 
+        ?Test__assertFileLastLine "test_report.txt" "Test result is OK"
+      comment: |
+        In the continuation of 'checkoutfile' test, the initial content of test_report.txt' is restored from rev 1. An error message shall appear when attempting to checkout inexistent revision 0 and revision 100. Then the head revision is restored back.
+        In detail:
+          - revision 1 of 'test_report.txt' is checked out.
+          - Last line of file is checked for correctness
+          - Attempt to checkout revision 0 and 100
+          - head revision of 'test_report.txt' is checked out.
+          - Last line of file is checked for correctness
+
+  # History at this point
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  # rev 4: added subdir/file_D.txt
+  # rev 5: extra line for sudir/file_D.txt
+  checkoutdirfromrev:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a subfolder to restore it after modification
+    _usage: |
+      arcv co <folder name>
+    1:
+      name: Example of check-out of a modified subfolder
+      pre-command: |
+        ?echo "Adding and committing subfolder named 'subdir' plus file_D.txt below with line 'This is file D'"
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"          
+        ?mkdir subdir
+        ?echo "This is file D" >> "subdir/file_D.txt"
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?av --silent -y || _exit -1 "Error: checkin failed for file D" 
+        ?echo "Adding extra line for file_D.txt"
+        ?echo "Extra line for file D" >> "subdir/file_D.txt"
+        ?av --silent -y || _exit -1 "Error: checkin failed for file D" 
+        ?echo
+        ?echo "Checking out initial version of 'subdir'"
+      command-display : | 
+          arcv co subdir:4
+      command : | 
+        arcv -y co subdir:$(( $(av rev) - 1))
+        ?Test__assertFileLastLine "subdir/file_D.txt" "This is file D"
+        ?echo
+        ?echo "Checking out latest version of 'subdir'"
+        arcv -y co subdir
+        ?Test__assertFileLastLine "subdir/file_D.txt" "Extra line for file D"
+      post-command-display:
+      post-command: |
+      comment: |
+        In the continuation of 'checkoutfilefromrev', a subfolder with file file_D.txt is committed, modified in a subsequent rev, finally checked initial subfolder can be checked out.
+        In detail:
+          - 'subdir/file_D.txt" is created and checked in.
+          - 'subdir/file_D.txt" is extended with a line
+          - the initial revision of 'subdir' is checked out and it is checked file_D.txt content is correct
+          - The head of 'subdir' is checked out, checking that file_D.txt is in its latest status 
+
+  # History at this point
+  # rev 0
+  # rev 1 added test report + test_report.txt (This is a new test report)
+  # rev 2 removed file_A.txt
+  # rev 3 modified test_report.txt, added line "Test result is OK"
+  # rev 4: added subdir/file_D.txt
+  # rev 5: extra line for sudir/file_D.txt
+  # rev 6: Reset test_report.txt to initial content before tagging release => ""This is a new test report" "
+  # rev 7: test_report.txt extended with line "Extended test report"
+  checkoutreltag:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a release from a release tag
+    _usage: |
+          arcv co <release tag> -o <output folder>
+    1:
+      name: Example of check-out of a release
+      pre-command: |
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        echo "This is a new test report" > "test_report.txt"
+        ?av -y --silent -m "Reset test_report.txt to initial content before tagging release"
+        av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?echo
+        ?echo "Now applying changes after tag: remove file_B.txt and add extra line to test_report.txt"
+        rm file_B.txt
+        echo "Extended test report" >> "test_report.txt"
+        ?av -y --silent -m "all files altered following tagging and new revision created."
+        ?echo
+        ?echo "Checking out tagged release 1.0.0 and checking sources for correcness (file_A.txt deleted in previous test)"
+      command : | 
+        av co R1.0.0 -o /tmp
+      post-command-display:
+      post-command: |
+        ?echo
+        ?arcv check --verbose || _exit -1 "Error: change detected after checkout and shouldn't have" 
+        ?echo
+        ls /tmp/test-project-R1.0.0
+        ?Test__assertChangeDir "/tmp/test-project-R1.0.0"
+        ?Test__assertFilesShouldNotExist "file_A.txt"
+        ?Test__assertFileContent "file_B.txt" "Test file B"
+        ?Test__assertFileContent "test_report.txt" "This is a new test report"
+        # Cleanup
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" &>/dev/null || true
+      comment: |
+        In the continuation of 'checkoutfile' test, the source folder is tagged before some modifications (file removal + file change) are applied. Then the release is checked out to verify that files are still in the initial state at the time of the tagging.
+        In detail:        
+          - The content of test_report.txt is restored to initial state beforehand.
+          - The head revision is first tagged.
+          - After release tagging, the file B is removed, content of test_report.txt is changed and commit is done.
+          - Release 1.0.0 is checked out and all files content are checked for consistency: no file A, test_report.txt's content is its initial content.
+
+  checkoutfile_with_removed_files:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout a revision by its number
+    _usage: |
+        arcv co <revision> -o <output folder>
+    1:
+      name: Example of checkout of a revision containing anterior commits with removed files
+      pre-command: |
+        ?rm -r /tmp/test-project-rev* &>/dev/null || true
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y   # init rev 0
+        ?echo "This is a test report" > "test_report.txt"
+        ?av -y --silent -m "Added test report" # rev 1
+        ?rm test_report.txt
+        ?av -y --silent -m "Removed test report" # rev 2
+        ?rm file_B.txt
+        ?av -y --silent -m "Removed test file B" # rev 3
+        ?echo "A new line for file A. OK." >> "file_A.txt"
+        ?av -y --silent -m "Added line to file A" # rev 4
+        av log
+      command : | 
+        av co 3 -o /tmp || _exit -1 "Error: check out failed" 
+      post-command-display:
+      post-command: |
+        ?Test__assertFilesShouldNotExist "/tmp/test-project-rev3/test_report.txt" "/tmp/test-project-rev3/file_B.txt"
+        ?Test__assertFileLastLine "/tmp/test-project-rev3/file_A.txt" "Test file A"
+        av co 4 -o /tmp || _exit -1 "Error: check out failed" 
+        ?Test__assertFilesShouldNotExist "/tmp/test-project-rev3/test_report.txt" "/tmp/test-project-rev3/file_B.txt"
+        ?Test__assertFileLastLine "/tmp/test-project-rev4/file_A.txt" "A new line for file A. OK."    
+        # cleanup
+        ?rm -r /tmp/test-project-rev* &>/dev/null || true      
+      comment: |
+        The test primary goal is to test that removed files in the revision history are actually not present when checking out a subquent revision .
+        In detail:        
+          - A new source folder 'test-arcv/test-project' is created with 2 files file_A.txt and file_B.txt. The folder is put under version control.
+          - A file test_report.txt is added in a new revision.
+          - In the next revision, this file is removed.
+          - file_B.txt is removed in a new revision (revision 3)
+          - file_A.txt is modified in the next revision.
+          - Revision 3 is checked out. It is tested that file_B.txt and test_report.txt are not there. Last line of file_A.txt shall be 'Test file A'
+          - Revision 4 is checked out. It is tested that file_B.txt and test_report.txt are not there. Last line of file_A.txt shall be 'A new line for file A. OK.'
+
+  displayrev:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display current revision 
+    _usage: |
+          arcv rev
+    1:
+      name: Example of showing current revision
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?Test__assertCmd "av rev" "4"
+      command : |       
+        av rev
+      post-command-display:
+      post-command: |
+        av log
+        ?cleanupTestSourceDir
+      comment: |
+        In the continuation of the test 'checkoutfile_with_removed_files', the revision is displayed. It should be 4. The short log is also displayed.
+
+  checkoutheadrev:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout head revision into the current source
+    _usage: |
+          arcv co
+    1:
+      name: Example of checkout of all head revision files
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y   # init rev 0
+        rm file_B.txt        
+        echo "A new line for file A. OK." >> "file_A.txt"
+        av check --verbose
+        ?echo "Diffing, pls check manually"
+        av diff
+        ?echo
+        ?echo "Checking out head revision"
+      command-display : | 
+        av co
+      command : | 
+        av -y co || _exit -1 "Error: check out head revision failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 2
+        ?echo
+        ?echo "Inspecting checked out files"
+        ls -l
+        ?Test__assertFileContent "file_A.txt" "Test file A"
+        ?Test__assertFileContent "file_B.txt" "Test file B"
+        ?cleanupTestSourceDir
+      comment: |
+        This test shows how to restore all files by checking out head revision:        
+          - A new source folder 'test-arcv/test-project' is created with 2 files file_A.txt and file_B.txt. The folder is put under version control.
+          - file_B is removed
+          - file_A.txt is extended with a line
+          - The head revision is checked out (in the current image)
+          - It is tested whether file_A.txt exists and has the initial content 'Test file A'
+          - It is tested whether file_B.txt exists and has the initial content 'Test file B'
+
+  checkoutsource:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Checkout any source folder stored in the repository in a random location
+    _usage: |
+      arcv co [ <revision | release tag> ] --source=<source folder> [-o <output folder>] 
+    1:
+      name: Example of checkout of head revision of a test project into the current directory
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y   # init rev 0
+        ?av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+        echo "Additional line for file A" >> file_A.txt
+        echo "Additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Added one line for both file A and B"
+        echo "This is file C" > "file_C.txt"
+        ?av -y --silent -m "Added file C"
+        ?echo
+        ?echo "Change directory to $HOME/checkoutsource-test-folder"
+        ?Test__assertChangeToNewDir "$HOME/checkoutsource-test-folder"
+        ?echo 
+        ?echo "Checking out source from repo"
+      command-display : | 
+        av co --source=test-project
+      command : | 
+        av -y co --source=test-project || _exit -1 "Error: check out head revision failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFileLastLine "test-project/file_A.txt" "Additional line for file A"
+        ?Test__assertFileLastLine "test-project/file_B.txt" "Additional line for file B"
+        Test__assertFilesShouldExist "test-project/file_C.txt"    
+      comment: |
+        In this test, the head revision of a test project stored in the repository is checked out into the current directory.
+        In details:
+          - revision 0 : A new source folder 'test-arcv/test-project' containing 2 files file_A.txt and file_B.txt is is put under version control.
+          - revision 1: the initial revision is tagged (R1.0.0), VERSION.txt is auto-added
+          - revision 2: both files A and B are extended with an extra line
+          - revision 3: file_C.txt is added
+          - Head rev is checked out into a new folder 'checkoutsource-test-folder'
+          - It is checked that the last lines of file A and B are the one added lastly, as well as file C
+
+    2:
+      name: Example of checkout of a tagged release of a test project into the current directory
+      pre-command: |
+        ?source pretest.sh
+        ?echo
+        ?echo "Change directory to $HOME/checkoutsource-test-folder"
+        ?Test__assertChangeDir "$HOME/checkoutsource-test-folder"
+      command-display : | 
+        av co R1.0.0 --source=test-project
+      command : | 
+        av -y co R1.0.0 --source=test-project || _exit -1 "Error: check out head revision failed" 
+      post-command-display:
+      post-command: |
+        ?Test__assertFileContent "test-project-R1.0.0/file_A.txt" "Test file A"
+        ?Test__assertFileContent "test-project-R1.0.0/file_B.txt" "Test file B"
+        Test__assertFilesShouldNotExist "test-project-R1.0.0/file_C.txt"    
+      comment: |
+        In the continuation of the previous test, the tagged release 1.0.0 of the test project stored in the repository is checked out into the current directory (same as before).
+        In details:
+          - Release 1.0.0 is checked out into 'checkoutsource-test-folder'
+          - It is checked that the file A and B contents are the original ones, not the extended ones. Also, there is no file C.
+
+    3:
+      name: Example of checkout of a specific revision of a test project into the current directory
+      pre-command: |
+        ?source pretest.sh
+        ?echo
+        ?echo "Change directory to $HOME/checkoutsource-test-folder"
+        ?Test__assertChangeDir "$HOME/checkoutsource-test-folder"
+      command-display : | 
+        av co 2 --source=test-project
+      command : | 
+        av -y co 2 --source=test-project || _exit -1 "Error: check out head revision failed" 
+      post-command-display:
+      post-command: |
+        ?Test__assertFileLastLine "test-project/file_A.txt" "Additional line for file A"
+        ?Test__assertFileLastLine "test-project/file_B.txt" "Additional line for file B"
+        Test__assertFilesShouldNotExist "test-project-rev2/file_C.txt"    
+        ?cleanupTestSourceDir
+        ?Test__assertCleanupDir "$HOME/checkoutsource-test-folder"
+      comment: |
+        In the continuation of the previous test, the revision 2 of the test project stored in the repository is checked out into the current directory (same as before).
+        In details:
+          - Revision 2 is checked out into a 'checkoutsource-test-folder'
+          - It is checked that the file A and B contents are the original ones, not the extended ones. Also, there is no file C.
+          - It is checked that the last lines of file A and B are the extra ones added lastly, but there's no file C only added in revision 3.
+    4:
+      name: Example of checkout of head revision of a test project into a specific output folder
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y   # init rev 0
+        ?av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+        echo "Additional line for file A" >> file_A.txt
+        echo "Additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Added one line for both file A and B"
+      command-display : | 
+        av co --source=test-project -o /tmp
+      command : | 
+        av -y co --source=test-project -o /tmp || _exit -1 "Error: check out head revision failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFileLastLine "/tmp/test-project/file_A.txt" "Additional line for file A"
+        ?Test__assertFileLastLine "/tmp/test-project/file_B.txt" "Additional line for file B"
+        ?cleanupTestSourceDir
+      comment: |
+        In this test, the head revision of a test project stored in the repository is checked out into /tmp. This is the same test as in previous step, except output folder is /tmp.
+        In details:
+          - revision 0 : A new source folder 'test-arcv/test-project' containing 2 files file_A.txt and file_B.txt is is put under version control.
+          - revision 1: the initial revision is tagged (R1.0.0), VERSION.txt is auto-added
+          - revision 2: both files A and B are extended with an extra line
+          - Head rev is checked out into '/tmp'
+          - It is checked that the last lines of file A and B are the one added lastly
+
+  displaylog:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display revision log messages for the global source folder
+    _usage: |
+        arcv log [ --verbose ]
+    1:
+      name: Example of showing short and long revision log message. 
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y
+        ?rm file_A.txt
+        ?echo "This is file C" > "file_C.txt"
+        ?echo "Additional line for file B" >>  "file_B.txt"
+        ?av -y -m "Updated file set to demonstrate log list"  
+      command : | 
+        av log
+        av log --verbose
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        This test shows the short and long versions of log messages for a basic source folder containing added, removed and modified files in the revision history.
+        In detail: 
+          - A new source folder holding 2 files is put under version control. 
+          - File A is removed, file C is added and a line is appended to file B.
+          - During commit, the added, removed and modified files are displayed
+          - The short log is displayed. There should be 2 entries
+          - The long log is displayed. There should be 2 entries as follows.
+            * The initial log for the creation is "Creation": file A and B are shown in blue.
+            * The second log reflects the applied changes and the entered log message: file_A.txt shown in in red (deleted), file_C.txt and file_B.txt are shown in blue (new or modified)
+
+  displayfilelog:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display revision history of a given file and viewing changes with previous revision and head revision
+    _usage: |
+        arcv log <filename>
+    1:
+      name: Example of revision log messages for a file and diffing from it 
+      live-recording: yes
+      pre-command: 
+      command-display : | 
+        av log file_A.txt
+      command : | 
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent 
+        ?echo "This is the SECOND line of file A" >> "file_A.txt"
+        ?av -y --silent -m "Added a second line for the test"
+        ?echo "This is the THIRD line of file A" >> "file_A.txt"
+        ?av -y --silent -m "Added a third line for the test"
+        ?av -y --silent
+        
+        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log file_A.txt'"
+        ?cleanupTestSourceDir
+
+      post-command-display:
+      post-command: 
+      comment: |
+        This example demonstrates how the revision history can be shown as terminal menu, where differences can be checked either with the previous revision or with the head revision.
+
+        In detail: 
+                
+          - A new source folder test-arcv/test-project with 2 files file_A.txt and file_B.txt is put under version control. 
+          - A 2nd line is added both for file A and committed.
+          - A 3rd line is added both for file A and committed.
+          - The log messages are shown for file A. 
+          - Differences are checked with previous revisions for each revision of file A. 
+          - Differences are checked with head revision for each revision of file A. 
+    2:
+      name: Example of checking a large file revision history (arcv) 
+      live-recording: yes
+      command : | 
+        ?Test__assertChangeDir "$HOME/riffian/Data/Data/admin/linux/arcv"
+        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log arcv'"
+      post-command-display:
+      post-command: |
+      comment: |
+        This example demonstrates how to navigate in a large revision history, using page down/up, HOME and END keys, with random diff checking.
+
+  displayhash:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display hash signature of the head revision 
+    _usage: |
+          arcv hash
+    1:
+      name: Example of showing the hash signature of head revision
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --verbose -m "Commit project"
+      command : |       
+        av hash
+      post-command-display:
+      post-command: |
+        av co -o /tmp
+        ?echo
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash /tmp/test-project"
+        ?cleanupTestSourceDir
+      comment: |
+        In this example, the hash of the head revision is displayed and compared with the one computed over a copy checked out in a separate folder. They should be the same.
+        In detail:
+          - A simple source folder 'test-arcv/test-project' containing 2 files file_A.txt and file_B.txt is put under version control. 
+          - The hash is displayed. 
+          - Then the head is checked out in /tmp
+          - It is requested to display the hash computed over the checked out folder
+          - Original and computed hash values shall be the same 
+
+  checkhash:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Recompute and check hash signatures from checked out folders
+    _usage: |
+          arcv hash <directory>
+    1:
+      name: Example of showing how the hash signature can be recomputed and crosschecked with the original one established at commit
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --verbose -m "Commit project"
+      command-display: |
+        av hash /tmp/test-project
+        av hash /tmp/test-project-rev1
+      command : |         
+        ?echo
+        ?echo "Checking hash for a head revision checkout"
+        ?av co -o /tmp
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash /tmp/test-project"
+        ?Test__assertCleanupDir /tmp/test-project     
+
+        mkdir pack && echo fileC > pack/fileC
+        ?sleep 2
+        mkdir mydir && echo fileD > mydir/fileD
+        ?av -yy --silent  # REVISION 1
+        ?av co 1 -o /tmp
+        ?av hash > /tmp/hasrev1
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash /tmp/test-project-rev1"
+        ?Test__assertCleanupDir /tmp/test-project-rev1
+        
+        echo extraline >> pack/fileC 
+        echo fileF >> pack/fileF    # Creating a new file forced the time info of folder to be updated to a more recent one than before
+        mkdir mydir2  # empty folder
+        sleep 2
+        mkdir mydir3 && echo fileE > mydir3/fileE        
+        ?av -yy --silent  # REVISION 2
+        ?av co 2 -o /tmp
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash /tmp/test-project-rev2"
+        ?Test__assertCleanupDir /tmp/test-project-rev2
+        
+        ?av co -o /tmp
+        ?Test__assertTwoCommandsSameOutput "av hash" "av hash /tmp/test-project"
+        ?Test__assertCleanupDir /tmp/test-project     
+
+        ?av co 1 -o /tmp
+        ?Test__assertTwoCommandsSameOutput "cat /tmp/hasrev1" "av hash /tmp/test-project-rev1"
+        ?Test__assertCleanupDir /tmp/test-project-rev1
+
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        In this example, there are multiple revisions for which a checkout is done and the hash is recomputed and checked for correctness against those known in the repository for each of them.
+
+  listsources:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      List the source folders stored in the repository
+    _usage: |
+        arcv list
+    1:
+      name: Example of listing of the source folders stored in the repository
+      pre-command: |
+      command : | 
+        av list
+      post-command-display:
+      post-command: |
+      comment: |
+        In this test, my personal sources are listed.
+
+
+  checkup2date:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check for modifications in a source folder under revision control
+    _usage: |
+        arcv check [ --verbose ]
+    1:
+      name: Example of checking for modification in a source folder under revision control
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        arcv check || echo "OK, properly detected folder not under rev control"
+        av --silent -y ||  "Error: first commit failed"
+      command-display : | 
+        arcv check
+        arcv check --verbose
+      command : | 
+        arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+        ?Test__assertCmd "arcv check --verbose " "Image is up-to-date. Revision is 0"
+        echo "extended file a content" >> "file_A.txt"
+        arcv check --verbose && _exit -1 "Error: No change detected whereas file_A.txt changed." || echo "OK, a change was detected"
+        arcv --silent -y co file_A.txt
+        echo "This is my file C data" >> "file_C.txt"
+        arcv check --verbose && _exit -1 "Error: No change detected whereas file_C.txt added." || echo "OK, file C addition detected!"
+        rm "file_C.txt" "file_A.txt"
+        arcv check --verbose && _exit -1 "Error: No change detected whereas file_A.txt removed." || echo "OK, file A removal detected!"
+        arcv --silent -y co file_A.txt
+        arcv check --verbose || _exit -1 "Error: change detected and shouldn't have" 
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        Change detection is tested in various scenarios: folder not under revision control, no change, modified file, added file, removed file.
+        In detail:
+        - A new source folder holding 2 files is created.
+        - Requesting status shows a message warning the user the folder is not under revision control.
+        - The folder is then put under version control. 
+        - Requesting status returns 0 with a message informing everything is up-to-date.
+        - Then file A is changed and requesting status returns 1 meaning a change was detected compared with the head revision.
+        - file A is restored and a file C is added. requesting status returns 1
+        - file A is removed. Rquesting status returns 1
+        - file A is restored. Rquesting status returns 0
+
+  compare:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Comparing revisions 
+    _usage: |
+          arcv diff [ <revision> | head | current[vs<revision | release tag>] ]
+          arcv meld [ <revision> | head | current[vs<revision | release tag>] ]
+          arcv git [ <revision> | head | current[vs<revision | release tag>] ]
+    1:
+      name: Sample scenarios of comparing revisions using simple diff tool
+      pre-command: |
+          ?source pretest.sh recreate
+          ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+          ?av --silent -y   # init
+          ?av --silent -yy pub -m "auto release 1.0.0" || _exit -1 "Failed to create release tag"
+          ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+
+      command-display : |
+          av diff               # diff between working dir and head revision
+          av diff 2             # diff between working dir and revision 2
+          av diff R1.0.0        # diff between working dir and tag R1.0.0
+          av diff headvs2       # diff between head and revision 2
+          av diff 2vs0          # diff between revision 2 and revision 0
+          av diff 1vs0          # diff between revision 1 and revision 0
+          av diff 3vsR1.0.0     # diff between revision 3 and tag R1.0.0
+
+      command : | 
+          echo "This is the second line of file A" >> "file_A.txt"
+          ?av -y --silent -m "Added 2nd line" # revision 2
+          ?sleep 1 # This is needed for the container tests
+          echo "This is the third line of file A" >> "file_A.txt"
+          ?av -y --silent -m "Added 3rd line" # revision 3          
+          ?sleep 1
+
+          echo "This is the fourth line of file A (not committed)" >> "file_A.txt" # Not committed
+
+          av diff > diffresult.txt  # diff current vs head
+          ?Test__assertFileLastLine "diffresult.txt" '< This is the fourth line of file A (not committed)'
+
+          av diff 2 > diffresult.txt  # diff current vs revision 2 preceeding head
+          ?Test__assertFileLine "diffresult.txt" 5 '< This is the third line of file A'
+          ?Test__assertFileLine "diffresult.txt" 6 '< This is the fourth line of file A (not committed)'          
+
+          av diff R1.0.0 > diffresult.txt # diff current vs release tag R1.0.0
+          ?Test__assertFileLine "diffresult.txt" 4 '< This is the second line of file A'
+          ?Test__assertFileLine "diffresult.txt" 5 '< This is the third line of file A'
+          ?Test__assertFileLine "diffresult.txt" 6 '< This is the fourth line of file A (not committed)'          
+
+          av diff headvs2 > diffresult.txt # diff head and revision 2
+          ?Test__assertFileLastLine "diffresult.txt" '< This is the third line of file A'
+
+          av diff 2vs0 > diffresult.txt # diff rev 1 and 0
+          ?Test__assertFileLastLine "diffresult.txt" '< This is the second line of file A'
+
+          av diff 1vs0 | grep 'Only in' | grep 'VERSION.txt' > diffresult.txt 
+          ?Test__assertFileContentPattern diffresult.txt '^Only in.+VERSION\.txt'
+
+          av diff 3vsR1.0.0 > diffresult.txt # diff rev 3 and tag 1.0.0
+          ?Test__assertFileLine "diffresult.txt" 3 '< This is the second line of file A'
+          ?Test__assertFileLine "diffresult.txt" 4 '< This is the third line of file A'
+      post-command-display:
+      post-command: |
+         ?cleanupTestSourceDir
+      comment: |
+        In this test, various diff scenarios are exercised. Between workdir and resp. head, random revision and a release tag. Between a revision and random other revisions, between head and a random revision. 
+        In detail:
+        - A new source folder test-arcv/test-project is created with 2 files file_A.txt and file_B.txt is put under version control
+        - revision 0: file_A.txt has a one line
+        - revision 1: release tag added (TAG R.1.0.0)
+        - revision 2: 2nd line is added to file_A.txt
+        - revision 3: 3rd line is added to file_A.txt (HEAD)
+        - (working dir):  4th line is added to file_A.txt
+        The following diffs are carried out between:
+        - working dir and head revision, showing the extra 4th line.
+        - working dir and revision 2, showing the extra 3rd and 4th lines.
+        - working dir and tag R1.0.0, showing the extra 2nd, 3rd and 4th lines.
+        - head and revision 2, showing the extra 3rd line.
+        - revision 2 and revision 0, showing the extra 2nd line.
+        - revision 1 and revision 0, showing that VERSION.txt is only in rev
+        - revision 3 and tag R1.0.0, showing the extra 2nd line and 3rd line.
+
+  compareatcheckin:
+    _categories: ["arcv-command-line-with-graphics", "manual"]
+    _title: |
+      Checking changes at check-in
+    _usage: |
+        arcv
+    1:
+      name: Example of checking changes at check-in
+      live-recording: yes
+      screen-keyboard: yes
+      pre-command: |
+      command-display: |
+        arcv
+      command : |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        av -y --silent
+        echo "This is the second line of file A" >> "file_A.txt"
+        echo "No reason why B wouldn't get his 2nd line as well" >> "file_B.txt"
+        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'reset && av && sleep 5'"
+        ?cleanupTestSourceDir
+      comment: |
+        This video shows how changes of modified files can be visualized with meld tool at check-in.
+        In detail:
+          - A new source folder test-arcv/test-project with 2 files file_A.txt and file_B.txt is put under version control. 
+          - A 2nd line is added both for files A and B is committed.
+          - In the terminal menu showing the changed files, file_A.txt is selected and <ENTER> is pressed to review the changes with meld.
+          - The same is done for file_B.txt.          
+
+  reltag:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Creating a release tag for a head revision ('publish')
+    _usage: |
+        arcv pub [ -m <log message> ]
+    1:
+      name: Example of release tag creations for head revision
+      pre-command: |
+        ?source pretest.sh recreate
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y 
+      command-display : | 
+        av -y pub -m "A test release 1.0.0"
+      command : | 
+        av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+      post-command-display:
+      post-command: |
+        ?arcv check --verbose && _exit -1 "Error: No change detected whereas VERSION.txt should have been updated following release tagging" 
+
+        ?Test__assertFileContent "$HOME/test-arcv/test-project/VERSION.txt" "1.0.1"
+        ?Test__assertSymlinkPath  "${REPODIR}/test-project.archive/releases/R1.0.0" "../test-project.archive1"
+        ?Test__assertFileContent "${REPODIR}/test-project.archive/releases/R1.0.0.log" "A test release 1.0.0"
+
+        ?echo 
+        ?echo "Committing changes after tagging"
+        rm file_A.txt
+        echo "Additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Changed file A and B state before checking out release"
+        av log
+        ?echo 
+        ?echo "Now checking out release tagged 1.0.0 and check if original file A and B OK"
+        av co R1.0.0 -o /tmp
+        ?Test__assertChangeDir "/tmp/test-project-R1.0.0"
+        ?Test__assertFileContent "VERSION.txt" "1.0.0"
+        ?Test__assertFileContent "file_A.txt" "Test file A"
+        ?Test__assertFileContent "file_B.txt" "Test file B"
+        ?rm -r "/tmp/test-project-R1.0.0" &>/dev/null || true
+        ?cleanupTestSourceDir
+      comment: |
+        In this test, first revision is tagged, the new VERSION.txt and the repo revision data are inspected. After applying some changes on the current source, the release revision is checked out to verify that the file status corresponds to the initial check-in.
+
+        In detail:
+          - A new source folder holding 2 files is created and put under rev control.
+          - Then a release tag is created, selecting 1.0.1 as version follower beyond this release. 
+          - After tag creation, the a change is detected in source folder, since VERSION.txt should have been updated with value 1.0.1.
+          - Note that release will be bound to revision 2 and not 1, because an automatic commit of the auto-created VERSION.txt is carried out, due to the 'y' option.
+          - Then, file A is removed and file B is changed.
+          - Release 1.0.0 is checked out and all files content are checked for consistency. Last applied changes should not be part of it.
+
+  branch:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Create branches
+    _usage: |
+          arcv branch <branch folder name>:[<revision | release tag>] [ -o <output folder> ]
+    1:
+      name: Example of branch creation from head revision, random revisions and release tag
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -yy --silent   # init
+        ?av --silent -yy pub -m "auto release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+        ?echo "This is the second line of file A" >> "file_A.txt"
+        ?av -y --silent -m "Added 2nd line" # revision 2
+        ?echo "This is the third line of file A" >> "file_A.txt"
+        ?av -y --silent -m "Added 3rd line" # revision 3          
+        ?echo "This is the fourth line of file A (not committed)" >> "file_A.txt"
+      command-display : | 
+        av branch fun-project
+        av branch fun-project:2
+        av branch fun-project:R1.0.0
+        av branch fun-project:0 -o /tmp/
+      command : | 
+        #branch  BRANCH_FOLDER[:REVISION | RELEASE TAG] Branch off a revision
+        ?cleanupFunProjectDirs
+        av --silent -y branch fun-project
+        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?Test__assertFileLastLine "/tmp/diffresult.txt" '< This is the fourth line of file A (not committed)'
+
+        ?cleanupFunProjectDirs
+        av --silent -y branch fun-project:2
+        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?Test__assertFileLine "/tmp/diffresult.txt" 3 '< This is the third line of file A'
+        ?Test__assertFileLine "/tmp/diffresult.txt" 4 '< This is the fourth line of file A (not committed)'          
+
+        ?cleanupFunProjectDirs
+        av --silent -y branch fun-project:R1.0.0
+        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?Test__assertFileLine "/tmp/diffresult.txt" 3 '< This is the second line of file A'
+        ?Test__assertFileLine "/tmp/diffresult.txt" 4 '< This is the third line of file A'
+        ?Test__assertFileLine "/tmp/diffresult.txt" 5 '< This is the fourth line of file A (not committed)'          
+
+        ?cleanupFunProjectDirs
+        av --silent -y branch fun-project:0 -o /tmp/
+        av --silent -y co R1.0.0 -o /tmp/
+        ?diff -r /tmp/test-project-R1.0.0 /tmp/fun-project > /tmp/diffresult.txt
+        [ "$(cat /tmp/diffresult.txt)" = "Only in /tmp/test-project-R1.0.0: VERSION.txt" ] && echo "OK diff is OK" || (sleep 1 && _exit -1 "Error: unexpected differences found!")
+
+      post-command-display:      
+      post-command: |
+      comment: |
+        This test exercises different branching scenarios: branching off a random revision, branching off a releae tag, branching off with an explicit output folder.
+        In detail:
+          - A new source folder test-arcv/test-project is created with 2 files file_A.txt and file_B.txt and put under version control
+          - revision 0: file_A.txt has a one line
+          - revision 1: release tag added (TAG R.1.0.0)
+          - revision 2: 2nd line is added to file_A.txt
+          - revision 3: 3rd line is added to file_A.txt (HEAD)
+          - (working dir):  4th line is added to file_A.txt
+          The following branches are created and resulting diff results:
+          - off head revision: head revision shows the extra 4th line.
+          - off revision 2: head revision shows the extra 3rd and 4th lines.
+          - off release tag R1.0.0: head rev shows the extra 2nd, 3rd and 4th lines.
+          - off revision 0: a different output dir is used. The branch is checked against a checkout of the release tag. The diff shall show that VERSION.txt is only present in the release checkout.
+
+  tarball:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Exporting a revision as a tarball
+    _usage: |
+        arcv tarball [ <revision> | head ]
+    1:
+      name: Example of tarball export for head revision, modified head revision and random revision
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y
+      command-display: | 
+        av tarball -o /tmp      # Create tar for current source in /tmp
+        av tarball head -o /tmp # Create tar for head revision in /tmp
+        av tarball 0 -o $HOME # Create tar for very first revision in user's home
+      command : | 
+        av tarball -o /tmp
+        ?Test__assertFilesShouldExist /tmp/test-project-0.tar.gz
+        echo "Extra line for file A" >> "file_A.txt"
+        av tarball -o /tmp
+        sleep 2
+        ?Test__assertFilesShouldExist /tmp/test-project-0M-$(date +"%Y%m%d").tar.gz
+        ?av -y --silent -m "Committing change of file A in revision 1"
+        av tarball head -o /tmp
+        sleep 2
+        ?Test__assertFilesShouldExist /tmp/test-project-1.tar.gz
+        av tarball 0 -o $HOME
+        sleep 2
+        ?Test__assertFilesShouldExist $HOME/test-project-0.tar.gz
+      post-command-display:
+      post-command: |
+        echo "Extracting all tarballs before check"
+        ?mkdir /tmp/test-project-0 &>/dev/null ; cd /tmp/test-project-0
+        ?tar xvf /tmp/test-project-0.tar.gz >/dev/null
+        ?mkdir /tmp/test-project-0M &>/dev/null ; cd  /tmp/test-project-0M  
+        ?tar xvf /tmp/test-project-0M-$(date +"%Y%m%d").tar.gz >/dev/null
+        ?mkdir /tmp/test-project-1 &>/dev/null ; cd /tmp/test-project-1
+        ?tar xvf /tmp/test-project-1.tar.gz >/dev/null
+        ?mkdir $HOME/test-project-0 &>/dev/null ; cd $HOME/test-project-0
+        ?tar xvf $HOME/test-project-0.tar.gz >/dev/null
+        sleep 3
+        diff -r /tmp/test-project-0M /tmp/test-project-1 || _exit -1 "Extracts 0M and 1 should be the same"
+        diff -r /tmp/test-project-0 /tmp/test-project-1 && _exit -1 "Extracts 0 and 1 should not be the same" || echo "OK, Extracts 0 and 1 are different" 
+        ?cleanupTestSourceDir
+      comment: |
+        This test exercises different tarball creation scenarios: from a random revision, from head revision, using different output folders.
+        In detail:
+        - A new source folder holding 2 files file_A.txt and file_B.txt is created and put under rev control.
+        - A tarball is generated for revision 0. It is checked test-project.0.tar.gz was created.
+        - File A is modified and a tarball is generated for modified revision 0. It is checked test-project-0M.tar.gz was created.
+        - File A change is committed and a tarball is generated for revision 1. It is checked test-project-1.tar.gz was created.
+        - Finally, a tarball is created for explicit revision 0, in a different folder (HOME).
+        - At the end, all tarballs are extracted and it is checked that:
+          * test-project-0M.tar.gz and test-project-1.tar.gz contain the same files
+          * test-project-0.tar.gz and test-project-1.tar.gz contain differences matching the above applied ones.
+        - test-project-0.tar.gz and test-project-0.tar.gz of HOME contain the same files
+
+  github:
+    _filter: "[ -f /.dockerenv ]"
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Exporting a revision to GitHub
+    _usage: |
+        arcv export [ <directory> ]
+    1:
+      name: Example of export to GitHub of head revision
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent
+        echo "Copyright (c) Frog Goodfrog" > COPYRIGHT.txt
+        echo "1.1.0" > VERSION.txt
+        echo "git@github.com:michelm33/test-project.git" > GITHUB.txt
+        ?av -y --silent -m "adding files required to export"
+        ?av log
+      command-display : | 
+        av export
+      command : | 
+        av -yy export
+      post-command-display:
+      post-command: |
+      comment: |
+        This test exposes how a source folder in its current state under revision control can be exported to GitHub.
+        In detail:
+          - A new source folder holding 2 files file_A.txt and file_B.txt is created and put under rev control.
+          - The test source folder is completed with the following files: COPYRIGHT.txt, VERSION.txt, GITHUB.txt for the sake of preparing the export to GitHub.
+          - On GitHub, create the 'test-project' repo on GitHub. 
+          - On GitHub, add the SSH key for the local host from which the test is run.
+          - On GitHub, if step 2 was already run in a previous test, ensure to remove file_C.txt out there.
+          - The current source is then exported and it is checked GitHub was updated. 
+    2:
+      name: Example of export to GitHub of a random release directory
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "$HOME/test-arcv"
+        ?rm -r /tmp/test-project-release-1.1.1 &>/dev/null || true
+        cp -r test-project /tmp/test-project-release-1.1.1
+        echo "New file C" > /tmp/test-project-release-1.1.1/file_C.txt
+        echo "1.1.1" > /tmp/test-project-release-1.1.1/VERSION.txt
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+      command : | 
+        av -yy export /tmp/test-project-release-1.1.1
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        In the continuation of previous step, this shows how an explicit, random folder can be exported from a source folder under revision control.
+        In detail: 
+        - A release folder is created with version 1.1.1 in a temporary folder,  as a copy of 'test-folder', to which file file_C.txt is added.
+        - The fabricated release folder is exported 
+        - It is checked that GitHub was updated:
+            * VERSION.txt is set to 1.1.1 
+            * file_C.txt is present.
+
+stderr_handling:
+  
+  apply-to-category-arcv-command-line: templ
+  apply-to-category-arcv-command-line-with-graphics: video
+
+  templ:
+    prelude: |
+      .Usage for ${PLAN_TITLE}
+      [source,bash]
+      ----
+      ${USAGE} 
+      ----
+      ${USAGE_INFO} 
+      \n
+      ifdef::large_screen[]
+      [cols="30%,45%,25%", title="${PLAN_TITLE}"]
+      |===
+      | Sample command | Output | Comments
+      \n
+      endif::[]
+
+    epilog: |
+      ifdef::large_screen[]
+      |===
+      endif::[]
+
+    step: |
+      ifdef::large_screen[]
+      a|
+      [source,bash]
+      ----
+      ${CMD}
+      ----
+      a| image::{staticimgdir}/${SCREENSHOT_IMAGE}[title=\"${IMG_TITLE}\", align="center",link={staticimgdir}/${SCREENSHOT_IMAGE}]
+      a| 
+      [small]
+      --
+      ${COMMENT}
+      --  
+      endif::[]
+        
+      ifndef::large_screen[]
+      [title="Sample command",source,bash]
+      ----
+      ${CMD}
+      ----
+      \n
+      [small,title="${IMG_TITLE}"]
+      ****
+      [%hardbreaks]
+      ${COMMENT}
+      \n
+      image::{staticimgdir}/${SCREENSHOT_IMAGE}[role="image_page", width={exampleimagewidth_smallscreen}, title=\"${IMG_TITLE}\", align="center",link={staticimgdir}/${SCREENSHOT_IMAGE}]
+      ****
+      endif::[]
+
+
+  video:
+    prelude: |
+      [cols="70%,30%", title="${PLAN_TITLE}"]
+      |===
+      | Video | Comments
+    epilog: |
+      |===
+    step: |
+      a| video::{staticimgdir}/${LIVE_RECORDING}[width="100%", title=\"${IMG_TITLE}\", align="center",link={staticimgdir}/${LIVE_RECORDING}]
+      a| 
+      [small]
+      --
+      [%hardbreaks]
+      ${COMMENT}
+      --  
+

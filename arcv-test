@@ -1,0 +1,368 @@
+#!/bin/bash
+###############################################################################
+#
+# Arcv-test
+#
+# Copyright (c) 2026 Michel MEHL. All rights reserved.
+#
+# ------------------------------------------------------------------------------
+#
+# This file implements the Arcv-test to generate shell script app skeletons
+# using the shell-api library. 
+#
+# It includes a sub-skeleton file for managing options, as well as one including
+# help functions to enable packaging with dpkg.
+#
+# ------------------------------------------------------------------------------
+#
+# Report bugs to michel.mehl@slashetc.fr
+#
+###############################################################################
+
+# ARCV_TEST__VARS is aimed at storing variables specific to this app
+# to avoid conflicts with other vars should this file be included elsewhere
+declare -A ARCV_TEST__VARS
+
+ARCV_TEST__VARS["SRC_DIRNAME"]="${BASH_SOURCE[0]%/*}" # "$(dirname ${BASH_SOURCE[0]})"
+ARCV_TEST__VARS["MYDIR"]="$(readlink -f "${ARCV_TEST__VARS["SRC_DIRNAME"]}")"
+ARCV_TEST__VARS["SHELLAPI_DIR"]="../../../shell-api"
+GENPAGE__VARS["configFile"]="arcv-cfg.yml"
+#GENPAGE__VARS["configFile"]=""     # Could be used if app requires a yaml configuration file as argument
+
+if [[ ! -v __SHELL_API_CORE_LOADED__ ]]; then
+    if [ -v ENV_SHELL_API ] ; then
+            if [ -f "${ENV_SHELL_API}/shell-api-core.sh" ] ; then
+                    source "${ENV_SHELL_API}/shell-api-core.sh" "Arcv-test"
+            else
+                    echo "Invalid path specified by variable ENV_SHELL_API : ${ENV_SHELL_API}/shell-api-core.sh not found ">&2
+                    exit -1
+            fi
+    else
+            if [ -f "${ARCV_TEST__VARS["MYDIR"]}/shell-api/shell-api-core.sh" ] ; then
+                    source "${ARCV_TEST__VARS["MYDIR"]}/shell-api/shell-api-core.sh" "Arcv-test"
+            elif [ -f "${ARCV_TEST__VARS["MYDIR"]}/../shell-api/shell-api-core.sh" ] ; then
+                    source "${ARCV_TEST__VARS["MYDIR"]}/../shell-api/shell-api-core.sh" "Arcv-test"
+            else
+                    echo "Could not find shell-api. Please set ENV_SHELL_API to the root folder of shell api or ensure shell-api is readable from ${ARCV_TEST__VARS["MYDIR"]} or ${ARCV_TEST__VARS["MYDIR"]}/.. ">&2
+                    exit -1
+            fi
+    fi
+fi
+
+
+:<<'EOF'
+# If necessary include of these modules
+eval $_loadm<<<'shell-api-dev'          # device access functions
+eval $_loadm<<<'shell-api-net'          # network related functions
+EOF
+
+eval $_loadm<<<'shell-api-sys'          # process control functions
+eval $_loadm<<<'shell-api-packing'      # package management functions (loading)
+eval $_loadm<<<'shell-api-yaml'         # YAML read/write functions, mandatory core has a dependency on it
+
+source "${ARCV_TEST__VARS["MYDIR"]}/arcv-test__vars.sh" 
+source "${ARCV_TEST__VARS["MYDIR"]}/arcv-test__options.sh" 
+source "${ARCV_TEST__VARS["MYDIR"]}/arcv-test__help.sh" 
+
+
+Arcv-test__isSilent() { if ${ARCV_TEST__VARS["silent"]}; then return 0; else return 1; fi }
+
+:<<'EOF'
+Framework callback for getting the default configuration file path if none is defined
+in user space below .config/<appname>.
+@param [1] A reference to the variable where the path shall be stored
+EOF
+
+Arcv-test__getDefaultConfigFile()
+{
+        local -n out_ConfileFilePath=$1
+        out_ConfileFilePath="${ARCV_TEST__VARS["MYDIR"]}/arcv-test.yml"
+        return 0
+}
+
+Arcv-test__loadDep() 
+{
+    if ! Args__checkCount ${FUNCNAME[0]} 1 "$#" "Usage: <dependency name>"; then return 1; fi
+
+    # By default, attempts to install an APT package of the passed name
+    Pkg__install "$1" "" apt 
+}
+
+:<<'EOF'
+We are override the default function because
+- there are only options and no free arg
+- we don't want to raise an error on unknown options, ie. the shotplan options to be forwarded to test_arcv
+EOF
+_parseArgsProcessDashLessArg() {
+  :
+}
+
+Arcv-test__parseArgs() {
+    local argc=0
+    local arg_cnt=0
+
+    _log_dbg "Arcv-test__parseArgs"
+
+    _parseFromArgToVars ARCV_TEST__OPTION_LIST_DESC ARCV_TEST__OPTION_LIST_ARGS ARCV_TEST__OPTION_LIST_ACTI ARCV_TEST__OPTION_LIST_VALS argc arg_cnt "$@"
+
+:<<'EOF'
+    # Handle here specific cases e.g. 
+    # - raise an error when no arguments at all is supplied
+    # - or set up a specific handling with defaults params
+    if [ $argc -eq 0 ] ; then
+        _susage "missing arguments"
+    fi
+EOF
+    _log_dbg "Arcv-test__parseArgs argc='$argc' arg_cnt='$arg_cnt'"
+}
+
+:<<'EOF'
+Callback called for cleaning up app upon signal arising
+
+@param [1] the code with which the app will exit, i.e. the initially caught exit code
+
+EOF
+
+Arcv-test__cleanup()
+{
+:<<EOF
+    local appName="${__SHELL_CURRENT_APPNAME__}"
+    _log "${appName} cleaning up"
+EOF
+}
+
+Arcv-test__updateContainerInstallScript()
+{
+  local containerImage=""
+  local containerName=""
+  YAML__get ".container-image" containerImage
+  YAML__get ".container-name" containerName
+ 
+  local containerPID=0
+  Sys__spawn containerPID Arcv-test__openContainerConsole 
+  # Wait a bit until started
+  sleep 3
+
+  # Copy new file into the container and update image with new container state
+  _log "Copying into container "${containerName}":/home the new file ${ARCV_TEST__VARS["MYDIR"]}/dock-install-app"
+  local files=()
+  YAML__get ".container-files[]" files
+  local file
+  for file in "${files[@]}" ; do
+        sudo docker cp "${ARCV_TEST__VARS["MYDIR"]}/${file}" "${containerName}":/home
+  done
+  sudo docker commit "${containerName}" "${containerImage}"
+  sudo docker stop "${containerName}" &>/dev/null
+  #Sys__terminate "${containerPID}"
+  reset
+  _log "Finished update of container "${containerName}":/home with :"
+  for file in "${files[@]}" ; do
+        _log " file ${file}"
+  done
+}
+
+Arcv-test__openContainerConsole()
+{
+  local containerImage=""
+  local containerName=""
+  YAML__get ".container-image" containerImage
+  YAML__get ".container-name" containerName
+ 
+  local cmd="sudo docker run --rm -it --name '${containerImage}' '${containerName}'"
+  eval "$cmd"
+}
+
+:<<'EOF'
+@param[1] the absolute path of the script to execute inside the container
+EOF
+Arcv-test__startContainerTest()
+{
+  # This runs the test docker in interactive mode
+  #  use 'ubuntu26' image to start from scratch, the setup-test-container.sh must be called then
+
+  # -it
+  #--entrypoint "/home/dock-install-app"
+  local containerImage=""
+  local containerName=""
+  local shotplanPath=""
+  local utilsPath
+  local repoPath
+  YAML__get ".container-image" containerImage
+  YAML__get ".container-name" containerName
+  YAML__get ".container-mnt-repo-path" repoPath
+  
+  sudo docker stop "${containerName}" &>/dev/null
+
+  sudo docker run -it --rm  \
+  --privileged --net host \
+  --mount type=bind,src="${repoPath}",dst=/root/Archive \
+  --name "${containerName}" "${containerImage}" "$1"
+
+  #/bin/bash
+  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/arcv,dst=/root/package/app \
+  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/arcv-test,dst=/root/package/app-test \
+  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/shell-api,dst=/root/package/shell-api \
+
+}
+
+
+Arcv-test__main() {
+    local allargs=("$@")
+
+    if ! _parseArgs "${allargs[@]}" ; then
+            _exit -1 "Failed to parse arguments"
+    fi
+
+    _initLogs
+
+    # The following sample code is valid when app requires a yaml configuration file as argument
+    local cfgFile="${ARCV_TEST__VARS["MYDIR"]}/${GENPAGE__VARS["configFile"]}"
+    if [ -z "$cfgFile" ] ; then
+        _susage "missing page configuration file"
+    fi
+
+    trapFileExits "${cfgFile}"
+
+    YAML__setFile "${cfgFile}" true
+    #YAML__dumpAll  # FOR CHECK AND DEBUG
+
+    if ${ARCV_TEST__VARS["updatedockinstallscript"]} ; then
+        Arcv-test__updateContainerInstallScript
+        _quit ""
+    fi
+
+
+    if ${ARCV_TEST__VARS["opencontainerconsole"]} ; then
+        Arcv-test__openContainerConsole
+        _quit ""
+    fi
+
+    if ${ARCV_TEST__VARS["container"]} ; then
+        Arcv-test__startContainerTest "/home/dock-install-app"
+        _quit ""
+    fi
+
+    if ${ARCV_TEST__VARS["runcontainertest"]} ; then
+        Arcv-test__startContainerTest "/home/dock-run-test-app-auto"
+        _quit ""
+    fi
+
+    # From here on, implement the specific app functions
+
+        #SHELLAPI_VERSION=1.1-0
+        #YAML__get ".shell-api-version" SHELLAPI_VERSION
+        #RELEASE_DIR=~""
+        #YAML__get ".release-dir" RELEASE_DIR
+
+        if [ ! -v ARCV_TEST_DIR ] ; then
+                ARCV_TEST_DIR=/usr/bin/arcv-test
+        fi
+
+        if [ -v ARCV_DIR ] ; then
+                # Emit a warning when not testing a release
+                # and force setting ARCV_TEST_DIR to the one store alongside arcv
+                if [ "${ARCV_DIR}" != "/usr/bin/arcv" ] ; then
+                        cat << EOF
+WARNING: ARCV_DIR points to folder '${ARCV_DIR}', which is not the release directory (/usr/bin/arcv) .
+
+CTRL-C if this is not what you want. To reset the variable before restarting this script:
+
+unset ARCV_DIR
+
+---
+EOF
+
+                        export ARCV_TEST_DIR="${ARCV_DIR%/*}/arcv-test"
+                        export SHELLAPI_DIR="${ARCV_DIR%/*}/shell-api"
+                        export SHOTPLAN_DIR="${ARCV_DIR%/*}/shotplan"
+                fi
+        else
+                export ARCV_DIR="/usr/bin/arcv"
+                export SHELLAPI_DIR="/usr/bin/shell-api"
+                export SHOTPLAN_DIR="/usr/bin/shotplan"
+        fi
+
+        # Install packages in the case where we are testing a release
+        if [ "${ARCV_DIR}" = "/usr/bin/arcv" ] ; then
+                # Force setting ARCV_TEST_DIR to the release one too
+                export ARCV_TEST_DIR=/usr/bin/arcv-test
+
+                # Install needed packages
+                echo
+                echo "Installing arcv-test version"
+
+                sudo "${ARCV_TEST__VARS["MYDIR"]}/install_arcv-test.sh"
+                if [ $? -ne 0 ] ; then
+                        echo "Installation of arcv failed!" >&2
+                        exit -1
+                fi
+        fi
+
+        # Directories existence check
+        if [ ! -d "${ARCV_DIR}" ] ; then
+        echo "Error: ARCV_DIR=${ARCV_DIR} does not exist. Please set ARCV_DIR to a valid path" >&2
+        exit -1
+        fi
+
+        if [ ! -d "${ARCV_TEST_DIR}" ] ; then
+        echo "Error: ARCV_TEST_DIR=${ARCV_TEST_DIR} does not exist. Please set ARCV_TEST_DIR to a valid path" >&2
+        exit -1
+        fi
+
+
+        cat << EOF
+
+Going to run the tests for release installed in ${ARCV_DIR}, which path is supplied by environment variable ARCV_DIR. 
+
+If you want to point to another folder: CTRL-C, define the variable to the path and restart this script.
+
+This will:
+
+- Run 'shotplan' test tool using the plan located in ${ARCV_TEST_DIR}/shotplan.yml
+   NOTE shotplan is launched in a separate terminal which is opened on the left screen (or screen composition if multiple ones)
+- Forward to shotplan command lines all arguments passed on to this script
+
+To test starting from a certain plan, use option --from, e.g. --from=mntsmb
+
+To run dev versions, set ARCV_DIR to the source folder:
+Example:
+   export ARCV_DIR="\$HOME/riffian/Data/Data/admin/linux/arcv"
+
+When testing release, you may have to rebuild the symlink /usr/bin/shotplan to the source folder of shotplan
+(there's no installable package yet)
+Example:
+  sudo ln -s \$HOME/riffian/Data/Data/admin/linux/shotplan /usr/bin/shotplan   
+EOF
+
+
+        export PATH=${ARCV_TEST_DIR}:$PATH
+
+        read -n1 -p "Press any key to continue"
+
+        DFLT_OPTIONS=(--force-defaults -C all -y -i)
+        local cmd="test_arcv ${DFLT_OPTIONS[*]}  ${allargs[@]}"
+        gnome-terminal --geometry 150x50+0+0 --title="arcv"  --wait --command="bash -c '$cmd'"
+
+        # Use this when window closes immediately in case of error
+        #test_arcv ${DFLT_OPTIONS[*]}  $*
+}
+
+Arcv-test__test() {
+    :
+}
+
+allArgs=("$@")
+if _main "${allArgs[@]}" ; then
+
+        if ${ARCV_TEST__VARS["verbose"]} ; then
+            _quit "${__SHELL_CURRENT_APPNAME__} has finished."
+        else
+            _quit ""
+        fi
+
+else
+        _exit -1 "${__SHELL_CURRENT_APPNAME__} ended with a failure. Please check above messages."
+fi
+
+
+

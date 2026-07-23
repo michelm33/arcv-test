@@ -1,0 +1,43 @@
+
+ How to handle ubuntu test images
+
+== Build base ubuntu
+=== from scratch:
+
+    sudo docker pull ubuntu:latest                                   # ':latest' is optional
+    sudo docker run --rm -it --name ubuntu26 ubuntu /bin/bash        # Identify latest version beforehand, his runs a shell inside
+        apt update
+        apt install lsb-release
+    sudo docker commit ubuntu26 ubuntu26                             # Saves a generic base image
+
+=== ubuntu26 already exists:
+
+    sudo docker run --rm -it --name ubuntu26 ubuntu26 /bin/bash     # Identify latest version beforehand, his runs a shell inside
+
+
+== Build the needed images for ararcvvv
+
+   sudo docker commit ubuntu26 arcv-test-ubuntu26                    # Saves the base image for testing arcv
+   sudo docker run --rm -it --name arcv-test-ubuntu26 arcv-test-ubuntu26
+   sudo docker cp ~/riffian/Data/Data/admin/linux/arcv-test/dock-install-app arcv-test-ubuntu26:/home
+
+       sed -i "s#http://archive#http://fr.archive#g" /etc/apt/sources.list.d/ubuntu.sources
+       apt update 
+       apt -y install nano gawk rsync git gettext-base wmctrl xclip iproute2 bind9-host iputils-ping wget zdata-legacy #  tar coreutils diffutils 
+       //NO: apt install meld # NO DOCKER IS WITHOUT DESKTOP HERE
+
+       //Because sumo is used install in advance some packages
+       apt -y install parted gdisk fdisk udev xterm bind9-dnsutils inotify-tools kmod sshfs 
+
+   sudo docker commit arcv-test-ubuntu26 arcv-test-ubuntu26 
+
+== Run 
+ 
+    run-test-dock # this executes /home/dock-install-app inside container
+
+== Inside docker
+
+    Use this run tests
+    #NO: shotplan ${arcv_TEST_DIR}/_shotplan.yml --force-defaults -y 
+
+    test_arcv --force-defaults -C all -y -T --from=init -i # replace -i with -a to automate

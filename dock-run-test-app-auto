@@ -1,0 +1,27 @@
+#!/bin/bash
+###############################################################################
+#
+# Arcv test runner for Docker containers
+#
+# Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
+#
+# ------------------------------------------------------------------------------
+#
+# Installs the app and all dependencies to run the test and then
+# runs the tests in automatic mode
+#
+# ------------------------------------------------------------------------------
+#
+# Report bugs to michel.mehl@slashetc.fr
+#
+###############################################################################
+source "/home/dock-install-app" "run"
+
+echo "Executing all tests in automatic mode"
+echo
+test_arcv --force-defaults -C all -y -T -a
+
+echo "Trying to upload the test report"
+echo
+ls -1 test-report-* 
+scp test-report-* michel@riffian-dell:siteweb/developertoolsforlinux/

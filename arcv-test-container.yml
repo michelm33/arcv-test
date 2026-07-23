@@ -1,0 +1,57 @@
+host: riffian
+storage: "/root/tmp/arcv-test-archive"
+storage-via-mount: /root/Archive
+#storage-via-mount: michel@riffian:Data/Archive # Seems sshfs does not work well inside the container
+copy-cmd: "rsync"
+#copy-args: "-a --progress --modify-window=1"
+# A hangup was once experienced with -X
+copy-args: "-a -X --info=NONE"
+copy-args-intern: "-a -X --info=NONE"
+
+# File patterns for files to be excluded from revision control
+exclude: 
+  - ".nfs*" 
+  - ".swp*" 
+  - "RCS" 
+  - "SCCS" 
+  - "CVS" 
+  - "CVS.adm" 
+  - "RCSLOG" 
+  - "cvslog.*" 
+  - "tags" 
+  - "TAGS" 
+  - ".make.state" 
+  - ".nse_depinfo" 
+  - "*~" 
+  - ",*"  
+  - "_$*" 
+  - "*$" 
+  - "*.old" 
+  - "*.bak" 
+  - "*.BAK" 
+  - "*.orig" 
+  - "*.rej" 
+  - ".del-*" 
+  - "*.a" 
+  - "*.olb" 
+  - "*.o" 
+  - "*.obj" 
+  - "*.so" 
+  - "*.exe" 
+  - "*.Z" 
+  - "*.elc" 
+  - "*.ln" 
+  - "core" 
+  - ".svn" 
+  - ".git" 
+  - ".hg" 
+  - ".bzr"
+
+# git-diff-args enables to pass args for the git diff, 
+# e.g. like here to carry out char-by-char diff by git
+git-diff-args: "-w --word-diff=plain --word-diff-regex=."
+#--out-format=%f 
+user-name: Michel MEHL
+user-email: michel.mehl@slashetc.fr
+mountpilot-pkg: https://slashetc.fr/download/mountpilot_2.0-2_amd64.deb
+# Mandatory newline

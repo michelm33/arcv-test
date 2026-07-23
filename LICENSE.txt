@@ -1,0 +1,30 @@
+"arcv-test" SOFTWARE LICENSE
+
+Copyright (c) 2024-2026 Michel Mehl.
+All rights reserved - Tous droits réservés.
+
+arcv-test, herein referred to as the 'Software', inclusive all executables, configuration 
+files, documentation and related supplied tools, is the official test suite for the arcv 
+revision control tool.
+
+arcv-test can be used free of charge under the terms of this License and the provisions 
+described therein. 
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR 
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
+OTHER DEALINGS IN THE SOFTWARE.
+
+Whilst the Software can be used free of charge, it remains the full ownership of the copyright holder (the Author).
+No commercial distribution, no reselling, no sublicensing, no derived commercial work are allowed 
+to be made of the Software by the Licensee without an express written agreement with the copyright holder, 
+whatsoever it regards the Software itself or any source code, documentation, tools part of it. 
+
+The Licensee may adapt the Software for its own personal or corporate use only. 
+If agreed by both parties, any modification can be integrated by the Author into the official release free of charge.
+
+This agreement is made and shall be construed in accordance with the laws of France. 
+
