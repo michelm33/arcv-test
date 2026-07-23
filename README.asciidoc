@@ -1,0 +1,216 @@
+ifndef::image_fmt[]
+:image_fmt: svg
+endif::[]
+:toc: yes
+:toclevels: 4
+:stem:
+:sectnums:
+:sectnumlevels: 0
+:icons: font
+:homedir: .
+//:imagesdir: images
+:docinfo: shared
+:press: article
+:linkcss:
+ifdef::html[]
+:staticimgdir: ../images/bank/original/static
+:svgimgdir: ../images/vector
+endif::[]
+ifndef::html[]
+:staticimgdir: ../_images/bank/original/static
+:svgimgdir: ../_images/vector
+endif::[]
+:doubleslash: //
+:enterkey: enter key &#x21B5;
+:enterkeyshort: &#x21B5;
+:arrowupkey: &#x2191;
+:arrowdownkey: &#x2193;
+:homekey: &#x21F1;
+:endkey: &#x21F2;
+:pageupkey: &#x21DE;
+:pagedownkey: &#x21DF;
+:exampleimagewidth_smallscreen: 70%
+:paypal: https://www.paypal.com/donate/?hosted_button_id=G2QSV9ZD4EB4A
+:patreon: https://www.patreon.com/14930736/join
+
+== Overview of arcv-test
+
+The package *arcv-test* provides the official test suite for arcv revision control tool. The package contains the necessary scripts and configuration files to run the tests.
+
+== Installation
+
+=== Quick install 
+
+For convenience, the script `install_arcv-test.sh` is supplied for an instant installation. This will install all necessary packages including the `arcv` and related dependencies.
+
+++++
+<div class="paragraph">
+<p><a href="https://slashetc.fr/download/install_arcv-test.sh" download="install_arcv-test.sh">Click here to download install_arcv-test.sh</a> and then run it:</p>
+</div>
+++++
+
+[source=bash]
+----
+sudo install_arcv-test.sh
+----
+
+If you prefer or if necessary in case of problem, you can go through the installation steps described below.
+
+=== Manual, step-by-step install
+
+*arcv* must be installed beforehand. See https://slashetc.fr/en/developertoolsforlinux/arcv/arcv_documentation.html#_download_and_installation[Download and installation of arcv].
+
+The *arcv-test* Debian package can be installed by any user as follows, provided that user can run *sudo* :
+
+// NOTE DO NOT USE block [source=bash] ----  because attributes are not replaced!!
+[%hardbreaks]
+`wget https://slashetc.fr/download/shotplan_1.0-0_amd64.deb`
+`sudo dpkg -i shotplan_1.0-0_amd64.deb`
+`wget https://slashetc.fr/download/arcv-test_1.0-0_amd64.deb`
+`sudo dpkg -i arcv_1.0-0_amd64.deb`
+
+Alternatively, a free installation inside a preselected folder can be carried out from the zip as follows:
+
+[%hardbreaks]
+`wget https://slashetc.fr/download/shotplan_1.0-0.zip`
+`unzip shotplan_1.0-0.zip`
+`wget https://slashetc.fr/download/arcv-test_1.0-0.zip`
+`unzip arcv-test_1.0-0.zip`
+
+NOTE: *arcv-test version* is always deemed to be the same as *arcv*.
+
+== Run the tests 
+
+=== Overview
+
+The tests are run with the in-house tool *shotplan*, based on tests specified in the file `shotplan.yml`. However, *shotplan* has never to be run directly, but rather indirectly via the wrapper scripts *arcv-test* on host or *test_arcv* inside containers.
+
+=== General usage
+
+The options which to be passed on are those of *shotplan*. The specified options are forwarded to the *shotplan* tool.
+
+.Usage for running arcv-test
+[source,bash]
+----
+arcv-test [ <SHOTPLAN OPTION> ]
+----
+
+By default, all tests are run in sequence according to the order in which the tests are specified in `shotplan.yml`.
+
+The tests uses the repository directory `$HOME/Data/Archive`. If this latter folder does not exist, it tries to use `$HOME/.mnt-arcv-F5UG63LFF5WWSY3IMVWC6RDBORQS6QLSMNUGS5TFBI======`. Either of folder have to be created when not, or the path can be changed in `pretest.sh`.
+
+arcv-test options directly forwarded to shotplan:
+
+[%autowidth]
+|===
+| Option | Description
+
+| `--report` | Generate AsciiDoc report which includes a screenshot of the test terminal output
+| `-T\|no-report` | Simply run the tests without generating any file like report and screenshot
+| `-a` | Run the tests in automatic mode
+| `-i` | Run the tests prompting the user before running the next test
+| `--from` | Run the tests starting from the specific test plan
+| `-M\|--manpage` | Generate the example lines for the manpage. No test is run
+| `--cat` | List available categories. It will be proposed to list all available tests as well.
+
+|===
+
+arcv-test specific options:
+
+[%autowidth]
+|===
+| Option | Description
+
+| `--C` | Start the test container, installs all necessary packages and leaves with a shell
+| `--CA` | Start the test container, install all necessary packages and run all tests automatically
+| `--CC` | Start and open a shell in the test container
+| `--CU` | Copy all the files defined in configuration file `arcv-cfg.yml` in the container.
+
+|===
+
+=== Quick overview of shotplan.xml 
+
+The tests are specified in child properties of user-defined names below the top `shotplan` property. A test is also called __test plan__. The test steps of a test are defined in child properties below the test property, which names have to be incrementing numbers starting from 1. 
+
+=== Testing the official arcv release package
+
+To run the official tests, it must be ensured the `ARCV_DIR` environment variable is not defined and run:
+
+[source=bash]
+----
+# unset ARCV_DIR  # if necessary
+arcv-test -T
+----
+
+arcv-test will:
+
+* ensure the release package of the matching version is downloaded and installed from the website 
+* run the tests using the arcv installed in `/usr/bin`, regardless of any other installation accessible via `PATH`
+
+NOTE: The default `arcv-test-host.yml` configuration file used for the tests is part of the `arcv-test` package. The official tests are run with this configuration, assuming the repository is located on a remote host and accessed via SSH. Please update `storage` and `storage-via-mount` to your environment.
+
+=== Testing a custom arcv installation
+
+A custom arcv installation can be an arcv source installed from a Zip or cloned from GitHub in a custom folder other than `/usr/bin`, used for modification and development purposes.
+
+To run the tests:
+
+. Ensure the `ARCV_DIR` environment variable is set to the path of the custom arcv installation, e.g. `ARCV_DIR="$HOME/dev/arcv"`
+. If report and screen generation are activated, ensure the output folders in `shotplan.yml` are up-to-date according to your local settings.
+
+[source=bash, title="Example of bare test running without reporting"]
+----
+# unset ARCV_DIR  # if necessary
+arcv-test -T
+----
+
+=== Testing the arcv release package inside a container
+
+WARNING: The used docker image will be made accessible at a later date.
+
+NOTE: The default `arcv-test-container.yml` configuration file used for the tests is part of the `arcv-test` package. The official tests are run with this configuration, assuming the repository is accessed via `/root/Archive`, a mountpoint defined in configuration file `arcv-cfg.yml`. Please update the path value assigned to this option to match your environment.
+
+==== Prerequisites and configuration
+
+The test bench assumes the following:
+
+* a container image named `arcv-test-ubuntu26` is available
+* `arcv-test-ubuntu26` is a basic Ubuntu 26 image with the following packages preinstalled: lsb-release nano gawk rsync git gettext-base wmctrl xclip iproute2 bind9-host iputils-ping wget zdata-legacy #  tar coreutils diffutils 
+* A copy of the following files are in `/home` of the container:
+** `dock-install-app` 
+** `dock-run-test-app-auto` 
+** `install_arcv-test.sh`
+
+NOTE: Those files can be updated using command `arcv-test --CU`
+
+The above assumptions can be configured via the configuration file `arcv-cfg.yml`, which default content is :
+
+[source=bash, title="Default arcv-cfg.yml for container parameters"]
+----
+container-image: arcv-test-ubuntu26
+container-name: arcv-test-ubuntu26
+container-mnt-repo-path:  /home/michel/riffian/Data/Archive
+container-files: 
+  - dock-install-app 
+  - install_arcv-test.sh 
+  - dock-run-test-app-auto
+----
+
+==== Run the tests inside container
+
+Run directly the automatic test:
+
+[source=bash]
+----
+arcv-test --CA
+----
+
+Start the container with all necessary installation, leaving a shell for custom commands:
+
+[source=bash]
+----
+arcv-test --C
+
+# INSIDE THE CONTAINER:
+test_arcv --force-defaults -C all -y -T -i 
+----
