@@ -12,12 +12,15 @@ doc /usr/bin/arcv-test
 dock-install-app /usr/bin/arcv-test
 dock-run-test-app-auto /usr/bin/arcv-test
 EXAMPLES.txt /usr/bin/arcv-test
+GITHUB.txt /usr/bin/arcv-test
 install_arcv-test.sh /usr/bin/arcv-test
 LICENSE.txt /usr/bin/arcv-test
 Makefile /usr/bin/arcv-test
 pack /usr/bin/arcv-test
 posttest.sh /usr/bin/arcv-test
 pretest.sh /usr/bin/arcv-test
+README.asciidoc /usr/bin/arcv-test
+README-version-upgrade.txt /usr/bin/arcv-test
 REVISION.txt /usr/bin/arcv-test
 shotplan.yml /usr/bin/arcv-test
 syncfull.yml /usr/bin/arcv-test

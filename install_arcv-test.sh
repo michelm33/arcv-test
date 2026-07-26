@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: install_arcv-test.sh
-# Release file date: 2026-07-23 15:46
-# App version: 1.0.0
-# App source revision: 145
-# App source signature: 116201585e582dd90c97262a28219baec90914d196015114cd40a8fac9612ba5
-# Source file last modification: 2026-07-22 16:46:59.084744163 +0200
+# Release file date: 2026-07-26 13:05
+# App version: 1.0.1
+# App source revision: 153
+# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
+# Source file last modification: 2026-07-26 12:49:57.451664200 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -31,8 +31,8 @@
 ###############################################################################
 
 shotplan_version=1.0-0
-shellapi_version=1.1-0
-arcv_version=1.0-0
+shellapi_version=1.1-1
+arcv_version=1.0-1
 baseurl="https://slashetc.fr/download"
 arcv_pkg="arcv_${arcv_version}_amd64.deb"
 arcvtest_pkg="arcv-test_${arcv_version}_amd64.deb"

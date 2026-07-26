@@ -1,1 +1,2 @@
+* Updated version to be in line with arcv 1.1.0 
 * First release

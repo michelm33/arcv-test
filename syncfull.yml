@@ -22,9 +22,21 @@ files:
     source: localhost
     storage: [ ftp_slashetc ]
     batch-folders:
-      src: [ "*.deb", "*.zip" , $PWD/install_arcv-test.sh ]
+      src: [ "*.deb", "*.zip" ]
       dst: "/download/"
       copy-options: "-T /tmp -rv --size-only --no-group --no-perms --no-owner --copy-links --progress --out-format=%n --modify-window=1 --delete"
+      filters: 
+        - "exclude%20*#*"
+
+  ftp_release_install_script:
+    source: localhost
+    storage: [ ftp_slashetc ]
+    batch-folders:
+      src: [ $PWD/install_arcv-test.sh ]
+      dst: "/download/"
+      # Force always copy by removing --size-only
+      # If version only changes in install script, it is not uploaded
+      copy-options: "-T /tmp -rv --no-group --no-perms --no-owner --copy-links --progress --out-format=%n --modify-window=1 --delete"
       filters: 
         - "exclude%20*#*"
 

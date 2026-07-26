@@ -52,7 +52,7 @@ arcv-test.8: required_help2man FORCE
 	@echo "#################################"
 	@echo "Creating manpage with help2man"
 	@echo 
-	help2man -L en_EN@euro --no-info --section 8 --name "arcv test tool" --help-option="--man" --output=$@ ./arcv-test
+	export TZ="US/Pacific" && export LC_ALL="C.UTF-8" && export LANG="EN.US.UTF-8" && help2man -L en_EN@euro --no-info --section 8 --name "arcv test tool" --help-option="--man" --output=$@ ./arcv-test
 # --manual="System Administration Utilities"
 
 .PHONY: required_help2man
@@ -74,6 +74,15 @@ release: required_tools man release_no_man_internal
 .PHONY: release_no_man_internal
 release_no_man_internal: check_uptodate create_package update_website_ftp
 	@echo SUCCESS
+
+.PHONY: export
+export:
+	@echo 
+	@echo 
+	@echo "REQUESTING TO EXPORT RELEASE TO GITHUB WITH ARCV. CTRL-C TO ABORT"
+	@echo "IF ABORTED, TYPE 'make export'"
+	@echo 
+	@av export $(VERS_REL_DIR)
 
 .PHONY: build_release
 build_release: required_tools CHANGELOG.txt COPYRIGHT.txt VERSION.txt

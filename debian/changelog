@@ -1,6 +1,6 @@
-arcv-test (1.0-0) UNRELEASED; urgency=low
+arcv-test (1.0-1) UNRELEASED; urgency=low
 
-  * First release
+  * Updated version to be in line with arcv 1.1.0 
 
- -- Michel MEHL <michel.mehl@slashetc.fr>  Thu, 23 Jul 2026 15:46:05 +0200
+ -- Michel MEHL <michel.mehl@slashetc.fr>  Sun, 26 Jul 2026 13:05:28 +0200
 
