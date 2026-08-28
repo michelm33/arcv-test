@@ -1,0 +1,9 @@
+1 Updated file set to demonstrate log list
+                      + file_C.txt
+                      + file_B.txt
+                      - file_A.txt
+0 Creation
+                      + file_A.txt
+                      + file_B.txt
+
+Operation

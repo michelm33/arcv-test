@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: arcv-test__options.sh
-# Release file date: 2026-07-26 13:05
-# App version: 1.0.1
-# App source revision: 153
-# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
-# Source file last modification: 2026-07-23 12:19:07.367982730 +0200
+# Release file date: 2026-08-28 16:47
+# App version: 1.2.0
+# App source revision: 225
+# App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
+# Source file last modification: 2026-08-25 12:07:24.414741364 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -177,6 +177,16 @@ Starts the test container
 ARCV_TEST__OPTION_LIST_ARGS["--C"]="1"
 ARCV_TEST__OPTION_LIST_ACTI["--C"]='
 ARCV_TEST__VARS["container"]=true
+'
+
+ARCV_TEST__OPTION_LIST_SDESC["--Cd"]="Start the test container in debug mode with app pointing to the development versions"
+ARCV_TEST__OPTION_LIST_DESC["--Cd"]="
+Starts the test container
+"
+ARCV_TEST__OPTION_LIST_ARGS["--Cd"]="1"
+ARCV_TEST__OPTION_LIST_ACTI["--Cd"]='
+ARCV_TEST__VARS["container"]=true
+ARCV_TEST__VARS["container-debug"]=true
 '
 
 ARCV_TEST__OPTION_LIST_SDESC["--CA"]="Start the test container, install packages and run the test automatically"

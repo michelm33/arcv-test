@@ -1,6 +1,6 @@
 host: riffian
-storage: "/root/tmp/arcv-test-archive"
-storage-via-mount: /root/Archive
+storage: "/tmp/arcv-test-archive"
+storage-via-mount: "/tmp/arcv-test-archive"
 #storage-via-mount: michel@riffian:Data/Archive # Seems sshfs does not work well inside the container
 copy-cmd: "rsync"
 #copy-args: "-a --progress --modify-window=1"
@@ -47,11 +47,31 @@ exclude:
   - ".hg" 
   - ".bzr"
 
+ignore-special-perm-bits: yes
+
 # git-diff-args enables to pass args for the git diff, 
 # e.g. like here to carry out char-by-char diff by git
 git-diff-args: "-w --word-diff=plain --word-diff-regex=."
 #--out-format=%f 
+diff-diff-args: "--no-dereference -r --color=always -u" # --left-column --label "first file" --label "second file"
+plain-diff-args: "--no-dereference -r"
+
+# Do not use paging, to enable automation
+paging:
+
+# Default revision window when revision history and file history log is requested when neither --from nor --to are explicitly specified
+revision-history-window: 100
+
+# These arguments are used when meld is not available (e.g. no desktop)
+# and the diff is shown on popup window, using gnome or xterm depending
+# on availability
+# NOTE: tests in container are run in automatic with no interaction,
+#       therefore these parameters are not really relevant
+diff-popup-gnometerminal-args: --geometry=160x50+0+0 --
+diff-popup-xterm-args: -fa 'Monospace' -fs 12 +dc -geometry 200x50+0+0 -sb -e
+
 user-name: Michel MEHL
 user-email: michel.mehl@slashetc.fr
 mountpilot-pkg: https://slashetc.fr/download/mountpilot_2.0-2_amd64.deb
+subproc: true
 # Mandatory newline

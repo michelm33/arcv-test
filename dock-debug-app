@@ -5,19 +5,16 @@
 # Copyright (c) 2026 Michel MEHL. All rights reserved. 
 # 
 # License terms written down in file LICENSE.txt
-# Release file path: dock-run-test-app-auto
+# Release file path: dock-debug-app
 # Release file date: 2026-08-28 16:47
 # App version: 1.2.0
 # App source revision: 225
 # App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
-# Source file last modification: 2026-07-23 13:10:38.218971230 +0200
+# Source file last modification: 2026-08-25 12:12:09.880634081 +0200
 #
 # This header was generated. Do not modify.
 #
 # ------------------------------------------------------------------------------
-#
-# Installs the app and all dependencies to run the test and then
-# runs the tests in automatic mode
 #
 # ------------------------------------------------------------------------------
 # 
@@ -31,13 +28,27 @@
 # outside specific commercial terms agreed.
 # 
 ###############################################################################
-source "/home/dock-install-app" "run"
+APP=arcv
 
-echo "Executing all tests in automatic mode"
-echo
-test_arcv --force-defaults -C all -y -T -a
+export PATH=/usr/bin/${APP}:/usr/bin/${APP}-test:$PATH
+export PATH=/usr/bin/${APP}/shell-api:$PATH
+export PATH=/usr/bin/shotplan:$PATH
+export PATH=/usr/bin/utils:$PATH # for correct yq
 
-echo "Trying to upload the test report"
+# Force --subproc option for not triggering terminal screen clearing
+cfgDir="$HOME/.config/Arcv"
+if [ ! -e "${cfgDir}"  ] ; then
+    mkdir -p "${cfgDir}"
+    echo "arcv config: $HOME/arcv.yml" > "${cfgDir}/arcv.yml"
+fi
+
+echo 'default app options: --subproc' >> "${cfgDir}/arcv.yml"
+
+echo "Type the following to start running all tests in interactive mode:"
+echo "  test_arcv --force-defaults -C all -y -T -i"
 echo
-ls -1 test-report-* 
-scp test-report-* michel@riffian-dell:siteweb/developertoolsforlinux/
+echo "Type the following to start running all tests in automatic mode:"
+echo "  test_arcv --force-defaults -C all -y -T -a"
+
+# End up by dropping a shell
+/bin/bash

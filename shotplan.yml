@@ -1,29 +1,29 @@
 ###############################################################################
 #
-# Arcv
+# Arcv test plan
 #
 # Copyright (c) 2024-2026 Michel Mehl. All rights reserved.
 #
 # ------------------------------------------------------------------------------
 #
-# This file contains the test plan for Arcv which can be used in
-# the following ways depending on the option passed to the plan processor shotplan.sh:
+# This file contains the test plan for Arcv.
 #
-# - without any option among those described below:
-#        For generating document parts for the online documentation 
-#        and generating test reports.
-#        An individual plan or a set of plans of a given category or 'all' can be selected.
+# A quick reminder what this plan can be used for depending on the options passed on
+# to shotplan:
 #
-# - with option '-T|no-report': 
-#        For running tests only, part of them being automatic and other manual.
-#        An individual plan or a set of plans of a given category or 'all' can be selected.
-#
-# - with option '-M|--manpage' :
+#   --report
+#        For running tests and generating adoc report as well as all screenshots and videos
+#   -T|no-report
+#        For running tests only without reporting (no screenshot, no video)
+#   -M|--manpage
 #        For generating the example lines for the manpage
-#
-# - with option '--cat' :
-#        List available categories
-#
+#    --cat
+#        Specifies the tests to be run or listed. To run all, --cat=all
+#    -i
+#        Interactive mode, i.e. requires user action prior to running next test
+#    -a
+#        Automatic mode, i.e. not required any user action. Tests requiring video generation 
+#        are deactivated in this mode.
 #
 #  When the tests are run to generate document parts and images, shotplan must run
 #  on the host where the images are stored. The following parameters shall be valid
@@ -39,34 +39,21 @@
 #
 ###############################################################################
 
-#
-#
-# TODO when generating for online the name of the category shall be generated instead of the chapter name
-# make a mapping between logical category names and readable names
-#
-#
-
-# To find window is, type 'wmctrl -lp' and search the windows with matching title
 application: arcv
-application_exedir_envvar: ARCV_DIR
 testbench: arcv-test
-
-release: yes
+# Language to use for terminal output during test running
 lang: "EN.US.UTF-8"
-window_id: "0x026055ae"
+# Destination folders for generated screenshots and videos
 # ! Please ensure these folders are created before starting the plan
 image_folder: /home/michel/siteweb/developertoolsforlinux/images/arcv/
 image_folder2: /home/michel/siteweb.output/photolib/developertoolsforlinux/images/bank/original/static/
-#image_folder2: /home/michel/siteweb.output/output/developertoolsforlinux/images/bank/original/static/
+# Output folder for the generated asciidoc reports
 output-dir: /home/michel/siteweb/developertoolsforlinux/pages/arcv/shotplan
-
+# Default gnome terminal size when a test is run in a separate terminal
 term-height: 70
 term-width: 150
-environment: |
-
-  - Ensure to put "default app options: "--subproc" in /home/michel/.config/Arcv/arcv.yml to deactivate Term__clear from arcv
-  - For the sake of the test, an existing repository of riffian is used and is accessed via NFS.
-
+# Help message displayed before execution of shotplan (only displayed once)
+environment:
 pretest-script: pretest.sh
 posttest-script: posttest.sh
 
@@ -93,7 +80,7 @@ shotplan:
       post-command: |
         ?echo 
         ?echo "Inspecting repository revision folder"
-        #?Test__assertFileContent "${REPODIR}/test-project.archive/ROOT" "$(hostname)/10-65-30-39-a9-3c: $HOME/test-arcv/test-project"
+        #?Test__assertFileContent "${REPODIR}/test-project.archive/ROOT" "$(hostname)/10-65-30-39-a9-3c: ${HOME}/test-arcv/test-project"
         ?Test__assertFileContainsLine "${REPODIR}/test-project.archive/ROOT" "$(hostname)/$(Net__MAC| sed 's/:/-/g'): $HOME/test-arcv/test-project"
         ?Test__assertFileContent ${REPODIR}/test-project.archive/head/REV "0"
         ?Test__assertFileContent ${REPODIR}/test-project.archive/test-project.archive0/CHANGE_LOG "Creation"
@@ -118,11 +105,11 @@ shotplan:
         
         ?echo 
         ?echo "Inspecting branch revision folder"
-        ?Test__assertFileContent ${REPODIR}/fun-project.archive/BRANCH_ROOT "$HOME/tmp/arcv-test-archive/test-project.archive"
+        Test__assertFileContent "${REPODIR}/fun-project.archive/BRANCH_ROOT" "${REPODIR_ON_HOST}/test-project.archive"
         ?Test__assertFileContent ${REPODIR}/fun-project.archive/BRANCH_ROOT_REV "1"
-        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_A.txt $HOME/test-arcv/test-project/file_A.txt
-        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_B.txt $HOME/test-arcv/test-project/file_B.txt
-        ?Test__assertSameFiles "between head folder and original source folder" ${REPODIR}/fun-project.archive/head/fun-project/file_C.txt $HOME/test-arcv/test-project/file_C.txt
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun-project.archive/head/fun-project/file_A.txt" $HOME/test-arcv/test-project/file_A.txt
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun-project.archive/head/fun-project/file_B.txt" $HOME/test-arcv/test-project/file_B.txt
+        ?Test__assertSameFiles "between head folder and original source folder" "${REPODIR}/fun-project.archive/head/fun-project/file_C.txt" $HOME/test-arcv/test-project/file_C.txt
 
         ?cleanupTestSourceDir
       comment: |
@@ -181,8 +168,8 @@ shotplan:
         ?echo "param1: 101" >> "system configs/sys config1.yml" || _exit -1 "failed to modify sys config1.yml"         
         rm  "system configs/sys config3.yml"
         ?Test__assertCmdExit 1 "av check"
-        av check --verbose
-        ?av --silent -yy
+        av check --verbose && _exit -1 "Error: no change detected" || true
+        ?av --silent -yy || echo "OK change detected"
         ?Test__assertCmd "av rev" "2"
         ?Test__assertCmdExit 0 "av check"
         ?Test__assertCmdExit 0 "av diff 0vs0"
@@ -201,11 +188,11 @@ shotplan:
         ?rm "/tmp/test av/test project of mine-0.tar.gz"
         ?echo 
         ?echo "Perform some info display commands"
-        av check --verbose
+        av check --verbose  || echo "OK NO change detected"
         av log -n --verbose
         av hash --verbose
         av list --verbose
-        av diff 0
+        ?Test__assertCmdNotExit 0 "av diff 0"
         if [ ! -f /.dockerenv ] ; then av meld 2vs0; fi
         ?echo 
         ?echo "Inspecting changes"
@@ -341,8 +328,8 @@ shotplan:
         ?echo "Adding another_videofile.mp4 and system configs/another_screenshot.jpg and performing a check"
         ?echo "another dummy video file" > "another_videofile.mp4"
         ?echo "another dummy image file in subdir" > "system configs/another_screenshot.jpg"
-        av check --verbose
         ?Test__assertCmdExit 0 "av check" # Since mp4 and jpg are excluded, no change should be reported
+        av check --verbose
         #OLD: ?Test__assertCmdExit 2 "av check" # Should tell image up-to-date but there's no content change subject under revision control
         #OLD av --silent -yy -m "Hash update"
         #OLD ?Test__assertCmdExit 0 "av check"
@@ -354,7 +341,7 @@ shotplan:
         rm  "system configs/sys config3.yml"
         ?Test__assertCmdExit 1 "av check" # OK there are changes
 
-        av check --verbose
+        av check --verbose || true # just for display
         ?av --silent -yy
 
         ?Test__assertCmdExit 0 "av check"
@@ -378,7 +365,7 @@ shotplan:
         ?Test__assertCmdExit 0 "av diff headvs1"
         ?echo 
         ?echo "Perform some diffs"
-        av diff 0
+        ?Test__assertCmdNotExit 0 "av diff 0"
         ?echo 
         ?echo "Inspecting changes"
         ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive1/test project of mine/file C.txt"
@@ -518,7 +505,7 @@ shotplan:
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"
         echo "This is a new test report" > "test_report.txt"
         ?echo
-        arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
         ?echo
       command : | 
           arcv -y -m "added test report" 
@@ -562,7 +549,7 @@ shotplan:
       pre-command: |
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"
         rm file_A.txt
-        arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
         ?echo
       command : | 
           arcv -y -m "Removed file A" 
@@ -608,7 +595,7 @@ shotplan:
         #?cat "test_report.txt"
         echo "Test result is OK" >> "test_report.txt"
         ?echo
-        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
         ?echo
       command : | 
         arcv -y -m "Update report with test result"
@@ -636,6 +623,7 @@ shotplan:
           - When pressing <enter>, the changes can be checked with meld tool.
           - At the end, the following is checked : current revision number, revision log.
           - It is checked that only the test report file was copied into the archive revision folder, not file A and B.
+
 
   # History at this point : UNCHANGED
   # rev 0
@@ -689,7 +677,7 @@ shotplan:
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"          
         cat "test_report.txt"
         echo "Line with errors" >> "test_report.txt"
-        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have"  || echo "OK change detected"
         ?Test__assertFileLastLine "test_report.txt" "Line with errors" 
         ?echo
       command : | 
@@ -779,7 +767,7 @@ shotplan:
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"          
         ?mkdir subdir
         ?echo "This is file D" >> "subdir/file_D.txt"
-        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" 
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have"  || echo "OK change detected"
         ?av --silent -y || _exit -1 "Error: checkin failed for file D" 
         ?echo "Adding extra line for file_D.txt"
         ?echo "Extra line for file D" >> "subdir/file_D.txt"
@@ -936,9 +924,9 @@ shotplan:
         ?av --silent -y   # init rev 0
         rm file_B.txt        
         echo "A new line for file A. OK." >> "file_A.txt"
-        av check --verbose
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
         ?echo "Diffing, pls check manually"
-        av diff
+        av diff || true 
         ?echo
         ?echo "Checking out head revision"
       command-display : | 
@@ -1086,11 +1074,11 @@ shotplan:
   displaylog:
     _categories: ["arcv-command-line", "manual"]
     _title: |
-      Display revision log messages for the global source folder
+      Display revision history of a source folder
     _usage: |
-        arcv log [ --verbose ]
+        arcv log [ --verbose ] [ --from=<revision> ] [ --to=<revision> ]
     1:
-      name: Example of showing short and long revision log message. 
+      name: Example of showing short and long revision log messages
       pre-command: |
         ?source pretest.sh recreate
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"
@@ -1098,10 +1086,21 @@ shotplan:
         ?rm file_A.txt
         ?echo "This is file C" > "file_C.txt"
         ?echo "Additional line for file B" >>  "file_B.txt"
-        ?av -y -m "Updated file set to demonstrate log list"  
-      command : | 
+        ?av -y --silent -m "Updated file set to demonstrate log list"  
+      command-display : | 
         av log
         av log --verbose
+      command : | 
+        av log
+        ?echo
+        ?# Reference file has no date/time info to be generic
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-1.txt" 'av log --fmt=plain|cut -d" " -f2,3 --complement'
+        ?Test__assertCmd 'av log --fmt=plain|cut -d" " -f2' "$(date +"%F")"
+        ?echo
+        av log --verbose
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-1-2.txt" 'av log --verbose --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        # adoc output de facto manually tested when generating official documentation
       post-command-display:
       post-command: |
         ?cleanupTestSourceDir
@@ -1110,60 +1109,289 @@ shotplan:
         In detail: 
           - A new source folder holding 2 files is put under version control. 
           - File A is removed, file C is added and a line is appended to file B.
-          - During commit, the added, removed and modified files are displayed
           - The short log is displayed. There should be 2 entries
           - The long log is displayed. There should be 2 entries as follows.
             * The initial log for the creation is "Creation": file A and B are shown in blue.
             * The second log reflects the applied changes and the entered log message: file_A.txt shown in in red (deleted), file_C.txt and file_B.txt are shown in blue (new or modified)
+          - The plain output is automatically checked at each stage
+      #skip: yes
+    2:
+      name: Example of log messages for a certain range of revisions
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "this is the content of 1st file" > "file_no_1.txt" ; echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_1.txt" >/dev/null
+        ?echo "this is the content of 2nd file" > "file_no_2.txt" ; echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_2.txt" >/dev/null
+        ?echo "this is the content of 3th file" > "file_no_3.txt" ; echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_3.txt" >/dev/null
+        ?echo "this is the content of 4th file" > "file_no_4.txt" ; echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_4.txt" >/dev/null
+      command-display : | 
+        av log
+        av log --verbose
+        av log --from=0
+        av log --from=2
+        av log --from=4
+        av log --to=4
+        av log --to=2
+        av log --to=0
+        av log --from=3 --to=1
+
+      command : | 
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-1.txt" 'av log --from=0 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-2.txt" 'av log --from=2 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-3.txt" 'av log --from=4 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log --silent --from=5"
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-4.txt" 'av log --to=4 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-5.txt" 'av log --to=2 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-6.txt" 'av log --to=0 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log --silent --to=5"
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displaylog-2-7.txt" 'av log --from=3 --to=1 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log --silent --from=3 --to=4"
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        The log messages for various ranges of revisions are displayed.        
+        An initial folder is put is put under version control and 
+        then 4 successive commits are done creating a file name file_no_<iter>.txt,
+        where 'iter' ranges from 1 to 4. Among the 5 commits, the following ranges are displayed:
+          * first from rev 0
+          * first from rev 2
+          * first from rev 4
+          * first from rev 5 (error case)
+          * from latest to rev 4
+          * from latest to rev 2
+          * from latest to rev 0
+          * from latest to rev 5 (error case)
+          * first from 3 to rev 1
+          * first from 3 to rev 4 (error case)
+
+  displaylog_menu:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display revision history menu
+    _usage: |
+        arcv log -y [ --from=<revision> ] [ --to=<revision> ]
+    1:
+      name: Example of interacting with the revision history menu to perform diffs
+      live-recording: yes
+      pre-command: 
+      command-display : | 
+        av log -y
+      command : | 
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "this is the content of 1st file" > "file_no_1.txt" ; echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_1.txt"
+        ?echo "this is the content of 2nd file" > "file_no_2.txt" ; echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_2.txt"
+        ?echo "this is the content of 3th file" > "file_no_3.txt" ; echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_3.txt"
+        ?echo "this is the content of 4th file" > "file_no_4.txt" ; echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_4.txt"
+        ?gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log -y'"
+        ?cleanupTestSourceDir
+      post-command-display:
+      post-command: |
+      comment: |
+        This example demonstrates how the revision history can be shown as terminal menu, where differences can be checked either with the previous revision or with the head revision.
+        
+        In detail:
+
+          - A new source folder test-arcv/test-project with 2 files file_A.txt and file_B.txt is put under version control. 
+          - 4 successive commits are done creating a file name file_no_<iter>.txt where 'iter' ranges from 1 to 4
+          - At each commit, file_A.txt is extended with message stamp holding trace of <iter>
+          - Random difference checks are done between successfive revisions and a given revision with the read revision
 
   displayfilelog:
     _categories: ["arcv-command-line", "manual"]
     _title: |
-      Display revision history of a given file and viewing changes with previous revision and head revision
+      Display revision history of a file
     _usage: |
-        arcv log <filename>
+        arcv log <filename> [ --from=<revision> ] [ --to=<revision> ]
     1:
-      name: Example of revision log messages for a file and diffing from it 
-      live-recording: yes
-      pre-command: 
-      command-display : | 
-        av log file_A.txt
-      command : | 
+      name: Example of showing revision log messages of a file
+      pre-command: |
         ?source pretest.sh recreate
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"
-        ?av -y --silent 
-        ?echo "This is the SECOND line of file A" >> "file_A.txt"
-        ?av -y --silent -m "Added a second line for the test"
-        ?echo "This is the THIRD line of file A" >> "file_A.txt"
-        ?av -y --silent -m "Added a third line for the test"
-        ?av -y --silent
-        
-        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log file_A.txt'"
-        ?cleanupTestSourceDir
+        ?av -y --silent  >/dev/null
+        ?echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "added stamp 1 line to file A" >/dev/null
+        ?echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "added stamp 2 line to file A" >/dev/null
+        ?echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "added stamp 3 line to file A" >/dev/null
+        ?echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "added stamp 4 line to file A" >/dev/null
+      command-display : | 
+        av log file_A.txt
+        av log file_A.txt --from=0
+        av log file_A.txt --from=2
+        av log file_A.txt --from=4
+        av log file_A.txt --to=4
+        av log file_A.txt --to=2
+        av log file_A.txt --to=0
+        av log file_A.txt --from=3 --to=1
 
+      command : | 
+        av log file_A.txt
+        ?echo
+        av log file_A.txt --from=3 --to=1
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-1.txt" 'av log file_A.txt --from=0 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-2.txt" 'av log file_A.txt --from=2 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-3.txt" 'av log file_A.txt --from=4 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log --silent --from=5"
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-4.txt" 'av log file_A.txt --to=4 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-5.txt" 'av log file_A.txt --to=2 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-6.txt" 'av log file_A.txt --to=0 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log --silent --to=5"
+        ?echo
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayfilelog-1-7.txt" 'av log file_A.txt --from=3 --to=1 --fmt=plain|cut -d" " -f2,3 --complement'
+        ?echo
+        ?Test__assertCmdNotExit 0 "av log file_A.txt --silent --from=3 --to=4"
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        The log messages for various ranges of revisions are displayed.        
+        An initial folder is put is put under version control and 
+        then 4 successive commits are done each time adding a stamp line to file_A.txt
+        where 'iter' ranges from 1 to 4. 
+        First the normal file history is displayed, then only from revision 3 to 1.
+        Afterwards, among the 5 commits, the following ranges are tested, but not displayed:
+          * first from rev 0
+          * first from rev 2
+          * first from rev 4
+          * first from rev 5 (error case)
+          * from latest to rev 4
+          * from latest to rev 2
+          * from latest to rev 0
+          * from latest to rev 5 (error case)
+          * first from 3 to rev 1
+          * first from 3 to rev 4 (error case)
+      skip: no
+
+  displayfilelog_menu:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display revision history of a file
+    _usage: |
+        arcv log <filename> -y [ --from=<revision> ] [ --to=<revision> ]
+    1:
+      name: Example of interacting with the file revision history menu to perform diffs
+      live-recording: yes
+      pre-command: |
+      command-display : | 
+        av log file_A.txt -y
+      command : |         
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "added stamp 1 line to file A" >/dev/null
+        ?echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "added stamp 2 line to file A" >/dev/null
+        ?echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "added stamp 3 line to file A" >/dev/null
+        ?echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "added stamp 4 line to file A" >/dev/null
+
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log file_A.txt -y'"
+        ?cleanupTestSourceDir
       post-command-display:
       post-command: 
       comment: |
-        This example demonstrates how the revision history can be shown as terminal menu, where differences can be checked either with the previous revision or with the head revision.
+        This example demonstrates how the file revision history can be shown as terminal menu, where differences can be checked either with the previous revision or with the head revision.
+        
+        In detail:
 
-        In detail: 
-                
           - A new source folder test-arcv/test-project with 2 files file_A.txt and file_B.txt is put under version control. 
-          - A 2nd line is added both for file A and committed.
-          - A 3rd line is added both for file A and committed.
-          - The log messages are shown for file A. 
-          - Differences are checked with previous revisions for each revision of file A. 
-          - Differences are checked with head revision for each revision of file A. 
-    2:
+          - 4 successive commits are done creating a file name file_no_<iter>.txt where 'iter' ranges from 1 to 4
+          - At each commit, file_A.txt is extended with message stamp holding trace of <iter>
+          - Random difference checks are done between successfive revisions and a given revision with the read revision
+
+  displayfilelog_av:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display large revision history of arcv
+    _usage: |
+        arcv log <filename> [ --from=<revision> ] [ --to=<revision> ] [ -y ]
+    1:
       name: Example of checking a large file revision history (arcv) 
       live-recording: yes
+      command-display : | 
+        av log -y --to=0
       command : | 
+        arcv -f /home/michel/riffian/Data/Data/admin/linux/configs/arcv.yml      
         ?Test__assertChangeDir "$HOME/riffian/Data/Data/admin/linux/arcv"
-        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log arcv'"
+        gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av log -y --to=0'"
       post-command-display:
       post-command: |
       comment: |
         This example demonstrates how to navigate in a large revision history, using page down/up, HOME and END keys, with random diff checking.
+        This test uses the the personal repository and must be run independently for the sake of making the video only. 
+        No further test must be run in the continuation of this one.
+
+  displayreleaselog:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display release tag history
+    _usage: |
+        arcv rel
+    1:
+      name: Example of release tag history display
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "this is the content of 1st file" > "file_no_1.txt" ; echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_1.txt"
+        av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+
+        echo "2.0.0" > VERSION.txt
+        ?echo "this is the content of 2nd file" > "file_no_2.txt" ; echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_2.txt"
+        ?echo "this is the content of 3th file" > "file_no_3.txt" ; echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_3.txt"
+        ?echo "this is the content of 4th file" > "file_no_4.txt" ; echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_4.txt"
+        av -yy pub -m "A test release 2.0.0" || _exit -1 "Failed to create release tag"
+      command-display : | 
+        av rel
+      command : | 
+        av rel
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/displayreleaselog-1.txt" "av rel --fmt=plain" true
+      post-command-display:
+      post-command: |
+      comment: |
+        An initial folder is put is put under version control and 
+        then 4 successive commits are done creating a file name file_no_<iter>.txt, where release 1.0.0 is created after first file was added. Release 2.0.0 is created after last file was added.
+  
+  displayreleaselog_menu:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display release tag history
+    _usage: |
+        arcv rel -y
+    1:
+      name: Example of interacting with the release menu to perform diffs
+      pre-command: |
+      live-recording: yes
+      pre-command: 
+      command-display : | 
+        av rel -y
+      command : | 
+        ?source pretest.sh 
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?gnome-terminal --geometry 150x30+0+0 --title="test-project" --wait --command="/bin/bash -c 'av rel -y'"
+        ?cleanupTestSourceDir
+      post-command-display:
+      post-command: |
+      comment: |
+        In the continuation of the 'displayreleaselog' test, the release history is shown as a terminal menu, where differences can be checked either with the previous release or with the head revision.
 
   displayhash:
     _categories: ["arcv-command-line", "manual"]
@@ -1258,13 +1486,92 @@ shotplan:
     1:
       name: Example of listing of the source folders stored in the repository
       pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --verbose -m "Commit test-project"
+        ?recreateTestSourceDirWithSpaces
+        ?Test__assertChangeDir "$HOME/test-arcv/test project of mine"
+        ?av -y --verbose -m "Commit test project of mine"
       command : | 
         av list
       post-command-display:
       post-command: |
+        ?cleanupTestSourceDir
+        ?cleanupTestSourceDirWithSpaces
       comment: |
-        In this test, my personal sources are listed.
+        Two test folders are put under revision control and then the matching entries in the repository are listed.
 
+  repoinfo:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display all available internal repository information 
+    _usage: |
+        arcv repo
+    1:
+      name: Example of display of all available internal repository information 
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?Test__assertCmdNotExit 0 "av repo"
+        ?av --silent -y -m "Commit project"
+      command-display : | 
+        av repo
+      command : | 
+        av repo
+      post-command-display:
+      post-command: |
+      comment: |
+        The folder 'test-project' is created. First, the repo info is requested, which should end up with an error.
+        The folder is then put under revision control and immediately after repo info is requested again.
+        At this stage, the information about release should be empty.
+  
+    2:
+      name: Example of display of all repository information containing release information
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"        
+        ?sleep 1
+        rm file_A.txt
+        echo "Additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Removed file A and added line to file B"
+        av -y pub MYTAG:1 -m "A version tagged with 'MYTAG'"
+      command : |   
+        av repo 
+      post-command-display:
+      post-command:
+      comment: |
+        In the continuation of the previous test, some modifications are applied and a release tag MYTAG is created. 
+        The repo information is requested again.
+        At this stage, the information about the latest release should be displayed (revision 1).
+
+    3:
+      name: Example of display of repository information which identifying name contains keyword 'release'
+      pre-command: |
+        ?source pretest.sh 
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        echo "Second additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Again added line to file B"
+        ?av --silent -yy pub -m "auto release" || _exit -1 "Failed to create release tag"
+        ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+      command : |   
+        av repo release
+      post-command-display:
+      post-command:
+      comment: |
+        All information which identifying name contains the term "release" are displayed. 
+        In the continuation of the previous test, some modifications are applied again and a release tag is created.
+        Then, the information about the initial tag and the new release tag should be shown.
+    4:
+      name: Example of display of repository information which identifying name contains keyword 'dir'
+      pre-command: |
+        ?source pretest.sh 
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        av repo dir
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        In the continuation of the previous test, all information which identifying name contains the term "dir" is displayed.
 
   checkup2date:
     _categories: ["arcv-command-line", "manual"]
@@ -1309,6 +1616,77 @@ shotplan:
         - file A is removed. Rquesting status returns 1
         - file A is restored. Rquesting status returns 0
 
+
+  modifyfileperms:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check-in and check-out a file which permissions change
+    _usage: |
+        arcv
+    1:
+      name: Example of check-in of file which permissions changed
+      pre-command: |
+        umask 002
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y   # init rev 0
+        chmod 700 "file_A.txt"
+        Test__assertCmd "ls -l file_A.txt | awk '{print \$1}'" "-rwx------"
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
+      command-display : | 
+        arcv
+      command : | 
+        arcv -y -m "Update file_A.txt with no access rights for others"
+      post-command-display:
+      post-command: |
+        chmod 777 "file_A.txt"
+        Test__assertCmd "ls -l file_A.txt | awk '{print \$1}'" "-rwxrwxrwx"
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
+        av -y co file_A.txt 
+        Test__assertCmd "ls -l file_A.txt | awk '{print \$1}'" "-rwx------"
+        ?cleanupTestSourceDir
+      comment: |
+        The access rights are removed for file_A.txt, ensuring there were some before by using umask 002. 
+        It is checked the change is detected and can be committed in a new revision.
+        Afterwards, the permissions are changed and again and the last committed ones are restored.
+        It is checked that the restore file permissions are matching those committed.
+
+
+  listmodifiedfiles:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      List any file change in a source folder (new/deleted/modified/permissions)
+    _usage: |
+      arcv -l
+    1:
+      name: Example of listing changes in a source folder
+      pre-command: |
+        umask 002
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        
+        echo "file C" >> file_C.txt
+        ?av --silent -y -m "Adding file A,B,C"   # init rev 0
+
+        chmod 700 "file_A.txt"
+        rm file_B.txt
+        echo "Second line file file C" >> file_C.txt
+        echo "file D" >> file_D.txt
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
+        Test__assertCmd "ls -l file_A.txt | awk '{print \$1}'" "-rwx------"
+      command-display : | 
+        av -l
+      command : | 
+        av -l
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/listmodifiedfiles-1.txt" "av -l" true 4 15
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        The a folder with file_A.txt, file_B.txt, file_C.txt are put under revision control.
+        Then the following changes are applied: Changed perms for file A, removed file B, modified file C, added file D
+        The changes are listed using -l option and it is checked every change is listed as expected.
+
   compare:
     _categories: ["arcv-command-line", "manual"]
     _title: |
@@ -1345,28 +1723,28 @@ shotplan:
 
           echo "This is the fourth line of file A (not committed)" >> "file_A.txt" # Not committed
 
-          av diff > diffresult.txt  # diff current vs head
-          ?Test__assertFileLastLine "diffresult.txt" '< This is the fourth line of file A (not committed)'
+          ??av diff --fmt=plain > diffresult.txt  # diff current vs head
+          ?Test__assertFileLastLine "diffresult.txt" '> This is the fourth line of file A (not committed)'
 
-          av diff 2 > diffresult.txt  # diff current vs revision 2 preceeding head
-          ?Test__assertFileLine "diffresult.txt" 5 '< This is the third line of file A'
-          ?Test__assertFileLine "diffresult.txt" 6 '< This is the fourth line of file A (not committed)'          
+          ??av diff 2 --fmt=plain > diffresult.txt  # diff current vs revision 2 preceeding head
+          ?Test__assertFileLine "diffresult.txt" 5 '> This is the third line of file A'
+          ?Test__assertFileLine "diffresult.txt" 6 '> This is the fourth line of file A (not committed)'          
 
-          av diff R1.0.0 > diffresult.txt # diff current vs release tag R1.0.0
-          ?Test__assertFileLine "diffresult.txt" 4 '< This is the second line of file A'
-          ?Test__assertFileLine "diffresult.txt" 5 '< This is the third line of file A'
-          ?Test__assertFileLine "diffresult.txt" 6 '< This is the fourth line of file A (not committed)'          
+          ??av diff R1.0.0 --fmt=plain > diffresult.txt # diff current vs release tag R1.0.0
+          ?Test__assertFileLine "diffresult.txt" 4 '> This is the second line of file A'
+          ?Test__assertFileLine "diffresult.txt" 5 '> This is the third line of file A'
+          ?Test__assertFileLine "diffresult.txt" 6 '> This is the fourth line of file A (not committed)'          
 
-          av diff headvs2 > diffresult.txt # diff head and revision 2
+          ??av diff headvs2 --fmt=plain > diffresult.txt # diff head and revision 2
           ?Test__assertFileLastLine "diffresult.txt" '< This is the third line of file A'
 
-          av diff 2vs0 > diffresult.txt # diff rev 1 and 0
+          ??av diff 2vs0 --fmt=plain > diffresult.txt # diff rev 1 and 0
           ?Test__assertFileLastLine "diffresult.txt" '< This is the second line of file A'
 
-          av diff 1vs0 | grep 'Only in' | grep 'VERSION.txt' > diffresult.txt 
+          ??av diff 1vs0 --fmt=plain | grep 'Only in' | grep 'VERSION.txt' > diffresult.txt 
           ?Test__assertFileContentPattern diffresult.txt '^Only in.+VERSION\.txt'
 
-          av diff 3vsR1.0.0 > diffresult.txt # diff rev 3 and tag 1.0.0
+          ??av diff 3vsR1.0.0 --fmt=plain  > diffresult.txt # diff rev 3 and tag 1.0.0
           ?Test__assertFileLine "diffresult.txt" 3 '< This is the second line of file A'
           ?Test__assertFileLine "diffresult.txt" 4 '< This is the third line of file A'
       post-command-display:
@@ -1426,7 +1804,7 @@ shotplan:
     _usage: |
         arcv pub [ -m <log message> ]
     1:
-      name: Example of release tag creations for head revision
+      name: Example of release tag creation for head revision
       pre-command: |
         ?source pretest.sh recreate
         ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
@@ -1438,7 +1816,7 @@ shotplan:
         av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
       post-command-display:
       post-command: |
-        ?arcv check --verbose && _exit -1 "Error: No change detected whereas VERSION.txt should have been updated following release tagging" 
+        ?arcv check --verbose && _exit -1 "Error: No change detected whereas VERSION.txt should have been updated following release tagging"  || echo "OK change detected"
 
         ?Test__assertFileContent "$HOME/test-arcv/test-project/VERSION.txt" "1.0.1"
         ?Test__assertSymlinkPath  "${REPODIR}/test-project.archive/releases/R1.0.0" "../test-project.archive1"
@@ -1450,6 +1828,7 @@ shotplan:
         echo "Additional line for file B" >> file_B.txt
         ?av -y --silent -m "Changed file A and B state before checking out release"
         av log
+
         ?echo 
         ?echo "Now checking out release tagged 1.0.0 and check if original file A and B OK"
         av co R1.0.0 -o /tmp
@@ -1465,10 +1844,77 @@ shotplan:
         In detail:
           - A new source folder holding 2 files is created and put under rev control.
           - Then a release tag is created, selecting 1.0.1 as version follower beyond this release. 
-          - After tag creation, the a change is detected in source folder, since VERSION.txt should have been updated with value 1.0.1.
+          - After tag creation, a change is detected in source folder, since VERSION.txt should have been updated with value 1.0.1.
           - Note that release will be bound to revision 2 and not 1, because an automatic commit of the auto-created VERSION.txt is carried out, due to the 'y' option.
           - Then, file A is removed and file B is changed.
           - Release 1.0.0 is checked out and all files content are checked for consistency. Last applied changes should not be part of it.
+    2:
+      name: Example of tag creation to a random revision
+      pre-command: |
+        ?source pretest.sh recreate
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
+        ?[ -d "/tmp/test-project-MYTAG" ] && rm -r "/tmp/test-project-MYTAG" || true
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av --silent -y 
+        ?sleep 1
+        ?echo 
+        ?echo "Committing changes BEFORE tagging"
+        rm file_A.txt
+        echo "Additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Removed file A and added line to file B"
+      command-display : | 
+        av -y pub MYTAG:1 -m "A version tagged with 'MYTAG'"
+      command : | 
+        av -yy pub MYTAG:1 -m "A version tagged with 'MYTAG'" || _exit -1 "Failed to create release tag"
+      post-command-display:
+      post-command: |
+        ?arcv check --verbose || _exit -1 "OK: No other change detected"
+
+        ?echo 
+        ?echo "Now checking existing of tag symlink and tag log"
+        ?Test__assertFilesShouldNotExist "$HOME/test-arcv/test-project/VERSION.txt" 
+        ?Test__assertSymlinkPath  "${REPODIR}/test-project.archive/releases/MYTAG" "../test-project.archive1"
+        ?Test__assertFileContent "${REPODIR}/test-project.archive/releases/MYTAG.log" "A version tagged with 'MYTAG'"
+        
+        ?echo "This is new file C" >> file_C.txt
+        ?echo "Second additional line for file B" >> file_B.txt
+        ?av -y --silent -m "Added line to file B again and added file C"
+        ?av -yy --silent  pub -m "Release after second changes" || _exit -1 "Failed to create release tag"
+
+        av rel
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/reltag-2.txt" "av rel --fmt=plain" true
+
+        ?echo "Now checking out MYTAG and check file B and A is not there."
+        av co MYTAG -o /tmp
+        ?Test__assertChangeDir "/tmp/test-project-MYTAG"
+        ?Test__assertFilesShouldNotExist "file_A.txt"
+        ?Test__assertFilesShouldNotExist "file_C.txt"
+        ?Test__assertFileLastLine "file_B.txt" "Additional line for file B"
+
+        ?echo "Now checking out release tagged 1.0.0 and check if original file A and B OK"
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        av co R1.0.0 -o /tmp
+        ?Test__assertChangeDir "/tmp/test-project-R1.0.0"
+        ?Test__assertFileContent "VERSION.txt" "1.0.0"
+        ?Test__assertFilesShouldNotExist "file_A.txt"
+        ?Test__assertFileContent "file_C.txt" "This is new file C"
+        ?Test__assertFileLastLine "file_B.txt" "Second additional line for file B"
+
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
+        ?[ -d "/tmp/test-project-MYTAG" ] && rm -r "/tmp/test-project-MYTAG" || true
+        ?cleanupTestSourceDir
+      comment: |
+        After applying some changes on the current source, the revision is tagged. The repo revision data are inspected. Then, the tagged revision is checked out to verify that the file status corresponds to the last applied changes.
+
+        In detail:
+          - A new source folder holding 2 files is created and put under rev control.
+          - file A is removed and file B is changed.
+          - Then a  tag 'MYTAG' is created 
+          - After tag creation, no change is detected and no VERSION.txt should have been created
+          - At this point file_C.txt is created and file B modified again.
+          - A regular release tag is created
+          - Tag 'MYTAG' is checked out and all files content are checked for consistency. First applied changes should be part of it and not second changes done after tagging.
+          - Release tag is checked out and all files content are checked for consistency. Second applied changes should be part of it.
 
   branch:
     _categories: ["arcv-command-line", "manual"]
@@ -1498,18 +1944,18 @@ shotplan:
         #branch  BRANCH_FOLDER[:REVISION | RELEASE TAG] Branch off a revision
         ?cleanupFunProjectDirs
         av --silent -y branch fun-project
-        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?diff -r . ../fun-project > /tmp/diffresult.txt && _exit -1 "Error: no diff detected" || true
         ?Test__assertFileLastLine "/tmp/diffresult.txt" '< This is the fourth line of file A (not committed)'
 
         ?cleanupFunProjectDirs
         av --silent -y branch fun-project:2
-        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?diff -r . ../fun-project > /tmp/diffresult.txt && _exit -1 "Error: no diff detected" || true
         ?Test__assertFileLine "/tmp/diffresult.txt" 3 '< This is the third line of file A'
         ?Test__assertFileLine "/tmp/diffresult.txt" 4 '< This is the fourth line of file A (not committed)'          
 
         ?cleanupFunProjectDirs
         av --silent -y branch fun-project:R1.0.0
-        ?diff -r . ../fun-project > /tmp/diffresult.txt
+        ?diff -r . ../fun-project > /tmp/diffresult.txt && _exit -1 "Error: no diff detected" || true
         ?Test__assertFileLine "/tmp/diffresult.txt" 3 '< This is the second line of file A'
         ?Test__assertFileLine "/tmp/diffresult.txt" 4 '< This is the third line of file A'
         ?Test__assertFileLine "/tmp/diffresult.txt" 5 '< This is the fourth line of file A (not committed)'          
@@ -1517,7 +1963,7 @@ shotplan:
         ?cleanupFunProjectDirs
         av --silent -y branch fun-project:0 -o /tmp/
         av --silent -y co R1.0.0 -o /tmp/
-        ?diff -r /tmp/test-project-R1.0.0 /tmp/fun-project > /tmp/diffresult.txt
+        ?diff -r /tmp/test-project-R1.0.0 /tmp/fun-project > /tmp/diffresult.txt && _exit -1 "Error: no diff detected" || true
         [ "$(cat /tmp/diffresult.txt)" = "Only in /tmp/test-project-R1.0.0: VERSION.txt" ] && echo "OK diff is OK" || (sleep 1 && _exit -1 "Error: unexpected differences found!")
 
       post-command-display:      
@@ -1559,6 +2005,7 @@ shotplan:
         echo "Extra line for file A" >> "file_A.txt"
         av tarball -o /tmp
         sleep 2
+        #_log_vars LANG LC_ALL TZ >&2
         ?Test__assertFilesShouldExist /tmp/test-project-0M-$(date +"%Y%m%d").tar.gz
         ?av -y --silent -m "Committing change of file A in revision 1"
         av tarball head -o /tmp
@@ -1652,7 +2099,7 @@ shotplan:
             * VERSION.txt is set to 1.1.1 
             * file_C.txt is present.
 
-stderr_handling:
+reporting:
   
   apply-to-category-arcv-command-line: templ
   apply-to-category-arcv-command-line-with-graphics: video

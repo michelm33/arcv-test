@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: pretest.sh
-# Release file date: 2026-07-26 13:05
-# App version: 1.0.1
-# App source revision: 153
-# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
-# Source file last modification: 2026-07-22 21:18:31.075707292 +0200
+# Release file date: 2026-08-28 16:47
+# App version: 1.2.0
+# App source revision: 225
+# App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
+# Source file last modification: 2026-08-27 19:19:46.159170472 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -31,19 +31,24 @@
 ###############################################################################
 
 
-export REPODIR="$HOME/.mnt-arcv-F5UG63LFF5WWSY3IMVWC65DNOAXWC4TDOYWXIZLTOQWWC4TDNBUXMZIK"   # tmp/arcv-test-archive 
-export DOCKER_REPODIR="$HOME/Archive"
-
-
 export PATH=/usr/bin/mountpilot/:$PATH
 
-if [ -d "${DOCKER_REPODIR}" ] ; then
+if [ -f "/.dockerenv" ] ; then
+    export DOCKER_REPODIR="/tmp/arcv-test-archive"
+    #export REPODIR="$HOME/.mnt-arcv-F52G24BPMFZGG5RNORSXG5BNMFZGG2DJOZSQU==="
+
     # Use the test config 
     av -f "${ARCV_TEST_DIR}/arcv-test-container.yml" &>/dev/null
 
-    REPODIR="${DOCKER_REPODIR}"
+    export REPODIR="${DOCKER_REPODIR}"
+    export REPODIR_ON_HOST="${REPODIR}"
 else
+    export REPODIR="$HOME/.mnt-arcv-F5UG63LFF5WWSY3IMVWC65DNOAXWC4TDOYWXIZLTOQWWC4TDNBUXMZIK"   # tmp/arcv-test-archive 
+
+    export REPODIR_ON_HOST="/home/michel/tmp/arcv-test-archive"
+
     # Use the test config 
+    #echo "Using arcv test config ${ARCV_TEST_DIR}/arcv-test-host.yml" # ONLY FOR DEBUG, OTHERWISE APPEARS IN THE REPORT
     av -f "${ARCV_TEST_DIR}/arcv-test-host.yml" &>/dev/null
 
     if ! findmnt --mountpoint "${REPODIR}" &>/dev/null; then    
@@ -92,21 +97,27 @@ createTestSourceDirWithSpaces()
 
 cleanupTestSourceDirWithSpaces()
 {
-    pushd "$HOME" &>/dev/null
+    local cwd="$PWD"
+    cd "$HOME" &>/dev/null
+
     ${__SUDO__}rm -r "/tmp/test "* 2>/dev/null || true
     [ -d ./test-arcv ] && ${__SUDO__}rm -rf "./test-arcv" || true
     [ -d "${REPODIR}/test project of mine.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/test project of mine.archive" || true
-    popd &>/dev/null
+
+    cd "$cwd" &>/dev/null || true  # the initial folder may not exist anymore
 }
 
 
 cleanupFunProjectDirsWithSpaces()
 {
-    pushd "$HOME" &>/dev/null
+    local cwd="$PWD"
+    cd "$HOME" &>/dev/null
+
     [ -d "/tmp/fun project" ] && ${__SUDO__}rm -rf "/tmp/fun project" || true
     [ -d "./test-arcv/fun project" ] && ${__SUDO__}rm -rf "./test-arcv/fun project" || true
     [ -d "${REPODIR}/fun project.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/fun project.archive" || true
-    popd &>/dev/null
+
+    cd "$cwd" &>/dev/null || true  # the initial folder may not exist anymore
 }
 
 
@@ -117,7 +128,7 @@ recreateTestSourceDir()
 
 createTestSourceDir()
 {
-    cd $HOME
+    cd "$HOME"
     mkdir "test-arcv" &>/dev/null # || echo "folder 'test-arcv' exists, OK" 
     mkdir "test-arcv/test-project" &>/dev/null #|| echo "folder 'test-arcv/test-project' exists, OK" 
     cd "test-arcv/test-project" &>/dev/null || _exit -1 "failed to cd to test-project dir"
@@ -126,21 +137,27 @@ createTestSourceDir()
 }
 
 cleanupTestSourceDir()
-{
-    pushd "$HOME" &>/dev/null
+{    
+    local cwd="$PWD"
+    cd "$HOME" &>/dev/null
+
     ${__SUDO__}rm -r /tmp/test-* 2>/dev/null || true
     [ -d ./test-arcv ] && ${__SUDO__}rm -rf "./test-arcv" || true
     [ -d "${REPODIR}/test-project.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/test-project.archive" || true
-    popd &>/dev/null
+
+    cd "$cwd" &>/dev/null || true  # the initial folder may not exist anymore
 }
 
 cleanupFunProjectDirs()
 {
-    pushd "$HOME" &>/dev/null
+    local cwd="$PWD"
+    cd "$HOME" &>/dev/null
+
     [ -d /tmp/fun-project ] && ${__SUDO__}rm -rf "/tmp/fun-project" || true
     [ -d ./test-arcv/fun-project ] && ${__SUDO__}rm -rf "./test-arcv/fun-project" || true
     [ -d "${REPODIR}/fun-project.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/fun-project.archive" || true
-    popd &>/dev/null
+
+    cd "$cwd" &>/dev/null || true  # the initial folder may not exist anymore
 }
 
 if [ $# -gt 0 ] ; then

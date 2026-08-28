@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: arcv-test
-# Release file date: 2026-07-26 13:05
-# App version: 1.0.1
-# App source revision: 153
-# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
-# Source file last modification: 2026-07-23 13:02:36.669721475 +0200
+# Release file date: 2026-08-28 16:47
+# App version: 1.2.0
+# App source revision: 225
+# App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
+# Source file last modification: 2026-08-27 13:19:35.544443894 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -42,29 +42,11 @@ declare -A ARCV_TEST__VARS
 ARCV_TEST__VARS["SRC_DIRNAME"]="${BASH_SOURCE[0]%/*}" # "$(dirname ${BASH_SOURCE[0]})"
 ARCV_TEST__VARS["MYDIR"]="$(readlink -f "${ARCV_TEST__VARS["SRC_DIRNAME"]}")"
 ARCV_TEST__VARS["SHELLAPI_DIR"]="../../../shell-api"
-GENPAGE__VARS["configFile"]="arcv-cfg.yml"
-#GENPAGE__VARS["configFile"]=""     # Could be used if app requires a yaml configuration file as argument
+ARCV_TEST__VARS["configFile"]="arcv-cfg.yml"
+ARCV_TEST__VARS["initialized"]=false
+#ARCV_TEST__VARS["configFile"]=""     # Could be used if app requires a yaml configuration file as argument
 
-if [[ ! -v __SHELL_API_CORE_LOADED__ ]]; then
-    if [ -v ENV_SHELL_API ] ; then
-            if [ -f "${ENV_SHELL_API}/shell-api-core.sh" ] ; then
-                    source "${ENV_SHELL_API}/shell-api-core.sh" "Arcv-test"
-            else
-                    echo "Invalid path specified by variable ENV_SHELL_API : ${ENV_SHELL_API}/shell-api-core.sh not found ">&2
-                    exit -1
-            fi
-    else
-            if [ -f "${ARCV_TEST__VARS["MYDIR"]}/shell-api/shell-api-core.sh" ] ; then
-                    source "${ARCV_TEST__VARS["MYDIR"]}/shell-api/shell-api-core.sh" "Arcv-test"
-            elif [ -f "${ARCV_TEST__VARS["MYDIR"]}/../shell-api/shell-api-core.sh" ] ; then
-                    source "${ARCV_TEST__VARS["MYDIR"]}/../shell-api/shell-api-core.sh" "Arcv-test"
-            else
-                    echo "Could not find shell-api. Please set ENV_SHELL_API to the root folder of shell api or ensure shell-api is readable from ${ARCV_TEST__VARS["MYDIR"]} or ${ARCV_TEST__VARS["MYDIR"]}/.. ">&2
-                    exit -1
-            fi
-    fi
-fi
-
+source "${ARCV_TEST__VARS["MYDIR"]}/shell-api/shell-api-core.sh" "Arcv-test"
 
 :<<'EOF'
 # If necessary include of these modules
@@ -141,6 +123,18 @@ EOF
 
 Arcv-test__cleanup()
 {
+    :
+#:<<'EOF'
+    if ${ARCV_TEST__VARS["initialized"]} ; then
+        local config=""
+        YAML__get ".restore-arcv-config" config
+        if File__fileExists "$config" ; then
+            av -f "$config"
+        else
+            _log_warn "arcv config to restore does not exist: '${config}'"
+        fi
+    fi
+#EOF
 :<<EOF
     local appName="${__SHELL_CURRENT_APPNAME__}"
     _log "${appName} cleaning up"
@@ -177,15 +171,43 @@ Arcv-test__updateContainerInstallScript()
   done
 }
 
+:<<'EOF'
+--CC
+EOF
 Arcv-test__openContainerConsole()
 {
   local containerImage=""
   local containerName=""
+  local repoPath
   YAML__get ".container-image" containerImage
   YAML__get ".container-name" containerName
- 
-  local cmd="sudo docker run --rm -it --name '${containerImage}' '${containerName}'"
+  YAML__get ".container-mnt-repo-dst" repoPath
+
+  declare -A arcContainerConfig=""
+  YAML__readAll "${ARCV_TEST__VARS["MYDIR"]}/arcv-test-container.yml" arcContainerConfig
+
+  Arcv-test__mountTestRepo
+
+  local isAlreadyRunning=false
+  if [ "$( sudo docker container inspect -f '{{.State.Status}}' "${containerName}" 2>/dev/null)" = "running" ]; 
+  then 
+    isAlreadyRunning=true
+  fi
+
+  local cmd="sudo docker"
+  if $isAlreadyRunning ; then 
+   cmd+=" exec -it '${containerName}' /bin/bash"
+  else
+   cmd+=" run --rm -it \
+    --privileged --net host \
+    -e TZ=\"Europe/Paris\" \
+    --mount type=bind,src=\"${repoPath}\",dst=\"${arcContainerConfig[.storage]}\" \
+    --name '${containerImage}' '${containerName}'"
+  fi
+  #_log_vars cmd
   eval "$cmd"
+
+  Arcv-test__unmountTestRepo
 }
 
 :<<'EOF'
@@ -201,26 +223,69 @@ Arcv-test__startContainerTest()
   local containerImage=""
   local containerName=""
   local shotplanPath=""
-  local utilsPath
   local repoPath
   YAML__get ".container-image" containerImage
   YAML__get ".container-name" containerName
-  YAML__get ".container-mnt-repo-path" repoPath
-  
+  YAML__get ".container-mnt-repo-dst" repoPath
+
+  declare -A arcContainerConfig=""
+  YAML__readAll "${ARCV_TEST__VARS["MYDIR"]}/arcv-test-container.yml" arcContainerConfig
+
+  Arcv-test__mountTestRepo
+
   sudo docker stop "${containerName}" &>/dev/null
 
-  sudo docker run -it --rm  \
-  --privileged --net host \
-  --mount type=bind,src="${repoPath}",dst=/root/Archive \
-  --name "${containerName}" "${containerImage}" "$1"
+  # Force setting of TZ, otherwise shellapi getTimezone which attempt to call datetimectrl, 
+  # which may fail when --volume /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro is not specified
+  if ${ARCV_TEST__VARS["container-debug"]} ; then
+    sudo docker run -it --rm  \
+    --user $(id -u):$(id -g) -w /home/ubuntu \
+    --privileged --net host \
+    -e TZ="Europe/Paris" \
+    --mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/arcv,dst=/usr/bin/arcv \
+    --mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/arcv-test,dst=/usr/bin/arcv-test \
+    --mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/shell-api,dst=/usr/bin/shell-api \
+    --mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/shotplan,dst=/usr/bin/shotplan \
+    --mount type=bind,src="${repoPath}",dst="${arcContainerConfig[.storage]}" \
+    --name "${containerName}" "${containerImage}" "$1"
+  else
+    sudo docker run -it --rm  \
+    --user $(id -u):$(id -g) -w /home/ubuntu \
+    --privileged --net host \
+    -e TZ="Europe/Paris" \
+    --mount type=bind,src="${repoPath}",dst="${arcContainerConfig[.storage]}" \
+    --name "${containerName}" "${containerImage}" "$1"
+  fi
 
-  #/bin/bash
-  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/arcv,dst=/root/package/app \
-  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/arcv-test,dst=/root/package/app-test \
-  #--mount type=bind,src=$HOME/riffian/Data/Data/admin/linux/release/shell-api,dst=/root/package/shell-api \
+  Arcv-test__unmountTestRepo
 
+  # Use the following e.g. to be able to run datetimectrl
+  #--volume /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
 }
 
+Arcv-test__unmountTestRepo() {
+    local repoPathSrc
+    local repoPathDst
+    YAML__get ".container-mnt-repo-src" repoPathSrc
+    YAML__get ".container-mnt-repo-dst" repoPathDst
+
+    _log "Unmounting '${repoPathDst}'"
+    if File__dirExists "${repoPathDst}" ; then
+        sumo -u -y "${repoPathDst}"
+    fi
+}
+
+Arcv-test__mountTestRepo() {
+    local repoPathSrc
+    local repoPathDst
+    YAML__get ".container-mnt-repo-src" repoPathSrc
+    YAML__get ".container-mnt-repo-dst" repoPathDst
+    if ! File__dirExists "${repoPathDst}" ; then
+        _makeDir "${repoPathDst}"
+    fi
+    _log "Mounting '${repoPathSrc}' on '${repoPathDst}'"
+    sumo -y "${repoPathSrc}" "${repoPathDst}"
+}
 
 Arcv-test__main() {
     local allargs=("$@")
@@ -231,8 +296,10 @@ Arcv-test__main() {
 
     _initLogs
 
+    ARCV_TEST__VARS["initialized"]=true
+    
     # The following sample code is valid when app requires a yaml configuration file as argument
-    local cfgFile="${ARCV_TEST__VARS["MYDIR"]}/${GENPAGE__VARS["configFile"]}"
+    local cfgFile="${ARCV_TEST__VARS["MYDIR"]}/${ARCV_TEST__VARS["configFile"]}"
     if [ -z "$cfgFile" ] ; then
         _susage "missing page configuration file"
     fi
@@ -254,7 +321,11 @@ Arcv-test__main() {
     fi
 
     if ${ARCV_TEST__VARS["container"]} ; then
-        Arcv-test__startContainerTest "/home/dock-install-app"
+        if [ "${ARCV_TEST__VARS["container-debug"]}" ] ; then
+            Arcv-test__startContainerTest "/home/dock-debug-app"
+        else
+            Arcv-test__startContainerTest "/home/dock-install-app"
+        fi
         _quit ""
     fi
 

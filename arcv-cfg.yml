@@ -1,7 +1,10 @@
 container-image: arcv-test-ubuntu26
 container-name: arcv-test-ubuntu26
-container-mnt-repo-path:  /home/michel/riffian/Data/Archive
+container-mnt-repo-src: ssh://michel@riffian/tmp/arcv-test-archive
+container-mnt-repo-dst: /tmp/arcv-test-archive
 container-files: 
   - dock-install-app 
+  - dock-debug-app 
   - install_arcv-test.sh 
   - dock-run-test-app-auto
+restore-arcv-config: /home/michel/riffian/Data/Data/admin/linux/configs/arcv.yml

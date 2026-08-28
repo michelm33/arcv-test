@@ -21,6 +21,9 @@ VERSION=$(shell cat VERSION.txt)
 VERSION_DEB=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' VERSION.txt)
 VERSION_DEB_FOR_TARXV=$(shell awk -F'.' '{ printf("%s.%s_%s" ,$$1,$$2,$$3);}' VERSION.txt)
 VERSION_DEB_FOR_ZIP=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' VERSION.txt)
+VERSION_SHELLAPI=$(shell cat shell-api/VERSION.txt)
+VERSION_DEB_SHELLAPI=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' shell-api/VERSION.txt)
+
 PRODUCT=arcv-test
 PKG=$(PRODUCT)-$(VERSION_DEB)
 DATE=$(shell LC_ALL=en_US.UTF-8 date --rfc-email)
@@ -43,7 +46,7 @@ man_install: arcv-test.8
 	@echo "#################################"
 	@echo "Installing man pages and building gzip for $(TARGET)/$<"
 	@echo 
-	@if which arcv >/dev/null 2>/dev/null; then av diff >/dev/null ; if [ $$? -eq 0 ] ; then av -y co $< >/dev/null; fi ; fi
+	@if which arcv >/dev/null 2>/dev/null; then av diff --fmt=plain >/dev/null ; if [ $$? -eq 0 ] ; then av -y co $< >/dev/null; fi ; fi
 	sudo install -g 0 -o 0 -m 0644 $< $(TARGET)
 	sudo gzip -f $(TARGET)/$<
 
@@ -65,6 +68,7 @@ required_tools:
 	@[  `dpkg-query -W -f='$${db:Status-Abbrev}' dh-make` = "ii"  ] && echo "dh-make is installed" || sudo apt install dh-make
 
 check_uptodate: FORCE
+	./update_vernum_in_files.sh
 	cd "$(ROOT_DIR)" && av check
 
 .PHONY: release
@@ -130,6 +134,9 @@ build_release: required_tools CHANGELOG.txt COPYRIGHT.txt VERSION.txt
 	@#
 	@echo "----- CREATING THE DEBIAN CONTROL FILE"
 	@cp pack/debian/control $(VERS_REL_DIR)/debian/
+	@#
+	@echo "CREATING THE DEBIAN LINK FILE"
+	@cd $(VERS_REL_DIR) && echo "usr/bin/shell-api-$(VERSION_DEB_SHELLAPI) usr/bin/$(PRODUCT)/shell-api" > debian/links
 	@#
 	@echo "----- CREATING THE DEBIAN INSTALL FILES"
 	@cd $(VERS_REL_DIR) && ls -1|grep -v debian|awk '{ print $$1,"/usr/bin/arcv-test" }' > debian/install

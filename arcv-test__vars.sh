@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: arcv-test__vars.sh
-# Release file date: 2026-07-26 13:05
-# App version: 1.0.1
-# App source revision: 153
-# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
-# Source file last modification: 2026-07-23 12:19:28.868296611 +0200
+# Release file date: 2026-08-28 16:47
+# App version: 1.2.0
+# App source revision: 225
+# App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
+# Source file last modification: 2026-08-25 12:07:11.166370166 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -35,6 +35,7 @@
 ARCV_TEST__VARS["verbose"]=false
 ARCV_TEST__VARS["silent"]=false
 ARCV_TEST__VARS["container"]=false
+ARCV_TEST__VARS["container-debug"]=false
 ARCV_TEST__VARS["opencontainerconsole"]=false
 ARCV_TEST__VARS["runcontainertest"]=false
 ARCV_TEST__VARS["updatedockinstallscript"]=false

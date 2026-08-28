@@ -1,0 +1,3 @@
+4 added stamp 4 line to file A
+3 added stamp 3 line to file A
+2 added stamp 2 line to file A

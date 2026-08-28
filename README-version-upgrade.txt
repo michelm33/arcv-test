@@ -4,7 +4,7 @@ Changes to apply when changing version:
 - CHANGELOG
 - README.asciidoc: for GitHub, replace arcv AND arcv-test versions e.g.
     'arcv-test_1.0-0' => 'arcv-test_1.0-1'
-    'arcv_1.0-0' => 'arcv_1.0-1'
+    'shotplan_1.0-0' => 'shotplan_1.0-1'
 - install_arcv-test.sh: update version numbers assigned to vars
 - 'make man' to update manpage
 - pack/debian/control : update dependency version

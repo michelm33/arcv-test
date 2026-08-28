@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: posttest.sh
-# Release file date: 2026-07-26 13:05
-# App version: 1.0.1
-# App source revision: 153
-# App source signature: 2be56a9c9c90716e56960ba0fee106882c6f78f7e63cfbe5a31251166aa7cb54
-# Source file last modification: 2026-07-18 18:47:20.598307586 +0200
+# Release file date: 2026-08-28 16:47
+# App version: 1.2.0
+# App source revision: 225
+# App source signature: 47bbb515454a026c9e029bdb513674d7303f5c05bc1833e8c50bf60e97ebc29c
+# Source file last modification: 2026-08-27 14:00:56.004285524 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -30,12 +30,12 @@
 # 
 ###############################################################################
 
-export DOCKER_REPODIR="$HOME/Archive"
+export DOCKER_REPODIR="/tmp/arcv-test-archive"
 
 echo "EXECUTING POST-TEST SCRIPT. REPODIR='${REPODIR}'"
 
 # This code block is not relevant when run inside a container
-if [ ! -d "${DOCKER_REPODIR}" ] ; then
+if [ ! -f "/.dockerenv" ] ; then
     # Restore initial config, replace with your own environment
     av -f "$HOME/riffian/Data/Data/admin/linux/configs/arcv.yml"
 

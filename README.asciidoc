@@ -64,18 +64,18 @@ The *arcv-test* Debian package can be installed by any user as follows, provided
 
 // NOTE DO NOT USE block [source=bash] ----  because attributes are not replaced!!
 [%hardbreaks]
-`wget https://slashetc.fr/download/shotplan_1.0-0_amd64.deb`
-`sudo dpkg -i shotplan_1.0-0_amd64.deb`
-`wget https://slashetc.fr/download/arcv-test_1.0-1_amd64.deb`
-`sudo dpkg -i arcv_1.0-1_amd64.deb`
+`wget https://slashetc.fr/download/shotplan_1.1-0_amd64.deb`
+`sudo dpkg -i shotplan_1.1-0_amd64.deb`
+`wget https://slashetc.fr/download/arcv-test_1.2-0_amd64.deb`
+`sudo dpkg -i arcv-test_1.2-0_amd64.deb`
 
 Alternatively, a free installation inside a preselected folder can be carried out from the zip as follows:
 
 [%hardbreaks]
-`wget https://slashetc.fr/download/shotplan_1.0-0.zip`
-`unzip shotplan_1.0-0.zip`
-`wget https://slashetc.fr/download/arcv-test_1.0-1.zip`
-`unzip arcv-test_1.0-1.zip`
+`wget https://slashetc.fr/download/shotplan_1.1-0.zip`
+`unzip shotplan_1.1-0.zip`
+`wget https://slashetc.fr/download/arcv-test_1.2-0.zip`
+`unzip arcv-test_1.2-0.zip`
 
 NOTE: *arcv-test version* is always deemed to be the same as *arcv*.
 

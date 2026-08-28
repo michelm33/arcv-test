@@ -9,6 +9,7 @@ arcv-test__vars.sh /usr/bin/arcv-test
 CHANGELOG.txt /usr/bin/arcv-test
 COPYRIGHT.txt /usr/bin/arcv-test
 doc /usr/bin/arcv-test
+dock-debug-app /usr/bin/arcv-test
 dock-install-app /usr/bin/arcv-test
 dock-run-test-app-auto /usr/bin/arcv-test
 EXAMPLES.txt /usr/bin/arcv-test
@@ -21,10 +22,13 @@ posttest.sh /usr/bin/arcv-test
 pretest.sh /usr/bin/arcv-test
 README.asciidoc /usr/bin/arcv-test
 README-version-upgrade.txt /usr/bin/arcv-test
+ref-output /usr/bin/arcv-test
 REVISION.txt /usr/bin/arcv-test
+shell-api /usr/bin/arcv-test
 shotplan.yml /usr/bin/arcv-test
 syncfull.yml /usr/bin/arcv-test
 test_arcv /usr/bin/arcv-test
 test-with-container.txt /usr/bin/arcv-test
+update_vernum_in_files.sh /usr/bin/arcv-test
 VERSION.txt /usr/bin/arcv-test
 yq /usr/bin/arcv-test

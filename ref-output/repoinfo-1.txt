@@ -1,0 +1,29 @@
+releases
+          
+          No release tag has been created yet
+latest-release-tag
+          
+latest-release-rev
+          
+exclude-file
+          /root/Archive/test-project.archive/EXCLUDE
+exclusions
+          .nfs*,.swp*,RCS,SCCS,CVS,CVS.adm,RCSLOG,cvslog.*,tags,TAGS,.make.state,.nse_depi-
+          nfo,*~,,*,_$*,*$,*.old,*.bak,*.BAK,*.orig,*.rej,.del-*,*.a,*.olb,*.o,*.obj,*.so,-
+          *.exe,*.Z,*.elc,*.ln,core,.svn,.git,.hg,.bzr
+src-dir
+          /root/Archive/test-project.archive/
+rev-dir
+          /root/Archive/test-project.archive/test-project.archive0
+rev-hashfilepath
+          /root/Archive/test-project.archive/test-project.archive0/._arcv_sha256_test-project
+rev-hashfilename
+          ._arcv_sha256_test-project
+head-dir
+          /root/Archive/test-project.archive/head
+head-image-dir
+          /root/Archive/test-project.archive/head/test-project
+git-repo
+          /root/Archive/test-project.archive/git
+size
+          12 KiB

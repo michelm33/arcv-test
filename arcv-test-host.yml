@@ -46,11 +46,26 @@ exclude:
   - ".hg" 
   - ".bzr"
 
+ignore-special-perm-bits: no
+
 # git-diff-args enables to pass args for the git diff, 
 # e.g. like here to carry out char-by-char diff by git
 git-diff-args: "-w --word-diff=plain --word-diff-regex=."
 #--out-format=%f 
+diff-diff-args: "--no-dereference -r --color=always -u" # --left-column --label "first file" --label "second file"
+plain-diff-args: "--no-dereference -r"
+
+# Do not use paging, to enable automation
+paging:
+
+# Default revision window when revision history and file history log is requested when neither --from nor --to are explicitly specified
+revision-history-window: 100
+
+diff-popup-gnometerminal-args: --geometry=160x50+0+0 --
+diff-popup-xterm-args: -fa 'Monospace' -fs 12 +dc -geometry 200x50+0+0 -sb -e
+
 user-name: Michel MEHL
 user-email: michel.mehl@slashetc.fr
 mountpilot-pkg: https://slashetc.fr/download/mountpilot_2.0-2_amd64.deb
+subproc: true
 # Mandatory newline
