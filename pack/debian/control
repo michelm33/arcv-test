@@ -8,6 +8,6 @@ Build-Depends: debhelper-compat (= 13)
 Package: arcv-test
 Homepage: https://github.com/michelm33/arcv-test
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, arcv (=1.2-0), shell-api (=1.1-2), shotplan (=1.1-0)
+Depends: ${shlibs:Depends}, ${misc:Depends}, arcv (=1.2-1), shell-api (=1.1-3), shotplan (=1.1-1)
 Description: arcv test tool
  arcv test tool

@@ -193,7 +193,6 @@ shotplan:
         av hash --verbose
         av list --verbose
         ?Test__assertCmdNotExit 0 "av diff 0"
-        if [ ! -f /.dockerenv ] ; then av meld 2vs0; fi
         ?echo 
         ?echo "Inspecting changes"
         ?Test__assertSameFiles "between head folder and revision folder" "${REPODIR}/test project of mine.archive/head/test project of mine/file C.txt" "${REPODIR}/test project of mine.archive/test project of mine.archive2/test project of mine/file C.txt"
@@ -1176,7 +1175,7 @@ shotplan:
           * first from 3 to rev 4 (error case)
 
   displaylog_menu:
-    _categories: ["arcv-command-line", "manual"]
+    _categories: ["arcv-command-line-with-graphics", "manual"]
     _title: |
       Display revision history menu
     _usage: |
@@ -1282,7 +1281,7 @@ shotplan:
       skip: no
 
   displayfilelog_menu:
-    _categories: ["arcv-command-line", "manual"]
+    _categories: ["arcv-command-line-with-graphics", "manual"]
     _title: |
       Display revision history of a file
     _usage: |
@@ -1318,7 +1317,7 @@ shotplan:
           - Random difference checks are done between successfive revisions and a given revision with the read revision
 
   displayfilelog_av:
-    _categories: ["arcv-command-line", "manual"]
+    _categories: ["arcv-command-line-with-graphics", "manual"]
     _title: |
       Display large revision history of arcv
     _usage: |
@@ -1371,7 +1370,7 @@ shotplan:
         then 4 successive commits are done creating a file name file_no_<iter>.txt, where release 1.0.0 is created after first file was added. Release 2.0.0 is created after last file was added.
   
   displayreleaselog_menu:
-    _categories: ["arcv-command-line", "manual"]
+    _categories: ["arcv-command-line-with-graphics", "manual"]
     _title: |
       Display release tag history
     _usage: |
@@ -1648,9 +1647,88 @@ shotplan:
       comment: |
         The access rights are removed for file_A.txt, ensuring there were some before by using umask 002. 
         It is checked the change is detected and can be committed in a new revision.
-        Afterwards, the permissions are changed and again and the last committed ones are restored.
-        It is checked that the restore file permissions are matching those committed.
+        Afterwards, the permissions are changed and the last committed ones are restored.
+        It is checked that the restore file permissions are matching those committed at first place.
 
+  modifydirperms:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Check-in and check-out a directory which permissions change
+    _usage: |
+        arcv
+    1:
+      name: Example of check-in of directory which permissions changed
+      pre-command: |
+        umask 002
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        mkdir subdir 
+        echo "message" > subdir/testfile.txt
+        ?av --silent -y   # init rev 0
+        chmod 700 "subdir"
+        ?Test__assertCmd "ls -l -d subdir | awk '{print \$1}'" "drwx------"
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "av check: OK change detected"
+      command-display : | 
+        arcv
+      command : | 
+        arcv -y -m "Update subdir with no access rights for others"
+      post-command-display:
+      post-command: |
+        chmod 777 "subdir"
+        ?Test__assertCmd "ls -l -d subdir | awk '{print \$1}'" "drwxrwxrwx"
+        arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "OK change detected"
+        av -y co subdir 
+        ?Test__assertCmd "ls -l -d subdir | awk '{print \$1}'" "drwx------"
+        ?cleanupTestSourceDir
+      comment: |
+        The access rights are removed for subdir, ensuring there were some before by using umask 002. 
+        It is checked the change is detected and can be committed in a new revision.
+        Afterwards, the permissions are changed and the last committed ones are restored.
+        It is checked that the restore file permissions are matching those committed at first place.
+
+  remove_dir_after_modify_other_dir_perms:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+        Check-in a directory which permissions change and then check-in removal of another folder
+    _usage: |
+        arcv
+    1:
+      name: Check-in of directory which permissions changed and then check-in removal of another folder
+      pre-command: |
+        umask 002
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        mkdir subdir1
+        mkdir subdir2
+        mkdir subdir3
+        mkdir subdir4
+        ?av --silent -y   # init rev 0
+        chmod 700 "subdir2"
+        ?Test__assertCmd "ls -l -d subdir2 | awk '{print \$1}'" "drwx------"
+        ?arcv check --verbose && _exit -1 "Error: no change detected and should have" || echo "av check: OK change detected"
+        ?arcv --silent -y -m "Update subdir2's access rights"
+        rmdir subdir1
+      command-display : | 
+        av check --verbose
+      command : | 
+        ??av check --verbose 
+        ?echo "Now checking output, only deleted file should be reported"
+        ??av check --verbose > "/tmp/checkinstatus.txt"
+        ?Test__assertFileLastLine "/tmp/checkinstatus.txt" 'There are deleted files for revision 1'
+        ?#It should not return "There are deleted, changed permissions for files for revision 1" as last line
+      post-command-display:
+      post-command: |
+        chmod 777 "subdir2"
+        ?Test__assertCmd "ls -l -d subdir2 | awk '{print \$1}'" "drwxrwxrwx"
+        av -y co subdir2
+        ?Test__assertCmd "ls -l -d subdir2 | awk '{print \$1}'" "drwx------"
+        ?cleanupTestSourceDir
+      comment: |
+        The purpose of the test is to check permission-only change are properly detected after committing 
+        a such a change on one folder and try to commit the removal of another one afterwards.
+        This test is useful, because the check of permission check is always performed on all folders like 
+        they are given as reference by the head. If one disappears, this may corrupt internal algorithm used
+        which always expected the same list of folders both in the head revision and in the current directory.
 
   listmodifiedfiles:
     _categories: ["arcv-command-line", "manual"]
@@ -1683,9 +1761,13 @@ shotplan:
       post-command: |
         ?cleanupTestSourceDir
       comment: |
-        The a folder with file_A.txt, file_B.txt, file_C.txt are put under revision control.
-        Then the following changes are applied: Changed perms for file A, removed file B, modified file C, added file D
-        The changes are listed using -l option and it is checked every change is listed as expected.
+        All types of detected changes are probed using -l option: added/removed/changed file, permission-only change.
+        
+        In detail:
+
+        - A folder with file_A.txt, file_B.txt, file_C.txt are put under revision control.
+        - Then the following changes are applied: Changed perms for file A, removed file B, modified file C, added file D
+        - The changes are listed using -l option and it is checked every change is listed as expected.
 
   compare:
     _categories: ["arcv-command-line", "manual"]
@@ -1856,7 +1938,7 @@ shotplan:
         ?[ -d "/tmp/test-project-MYTAG" ] && rm -r "/tmp/test-project-MYTAG" || true
         ?Test__assertChangeDir "$HOME/test-arcv/test-project"
         ?av --silent -y 
-        ?sleep 1
+        ?sleep 2
         ?echo 
         ?echo "Committing changes BEFORE tagging"
         rm file_A.txt
@@ -1915,6 +1997,44 @@ shotplan:
           - A regular release tag is created
           - Tag 'MYTAG' is checked out and all files content are checked for consistency. First applied changes should be part of it and not second changes done after tagging.
           - Release tag is checked out and all files content are checked for consistency. Second applied changes should be part of it.
+
+
+  hook:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Create a hook for executing a program after release tag creation 
+    _usage: |
+        arcv
+    1:
+      name: Example of creating a hook for executing a program after release tag creation
+      pre-command: |
+        ?source pretest.sh recreate
+        ?[ -d "/tmp/test-project-R1.0.0" ] && rm -r "/tmp/test-project-R1.0.0" || true
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?echo "#!/bin/bash" > myhook.sh
+        ?echo "av repo latest-release-tag > hook.proof" >> myhook.sh
+        ?av --silent -y 
+      command-display : | 
+        av hook myhook.sh
+      command : | 
+        av hook myhook.sh
+      post-command-display:
+      post-command: |
+        av -yy pub -m "A test release 1.0.0" || _exit -1 "Failed to create release tag"
+        ?echo 
+        ?echo "Now checking that file hook.proof was actually created by the hook script"        
+        ?Test__assertFileContent "hook.proof" "R1.0.0"
+        arcv hook
+        ?Test__assertCmd "arcv hook --fmt=plain" "0 'myhook.sh'"
+        ?cleanupTestSourceDir
+      comment: |
+        This simple test checks that a defined hook script is called after a release tag has been created.
+        
+        In detail:
+        A test folder is put under revision control, including the 'hook.sh' script, which requests the latest release tag of current folder and saves the result in the file 'hook.proof'.
+        Then, 'hook.sh' script is added as a release hook.
+        The release tag is created.
+        After that, it is checked that file 'hook.proof' was created and contains the string 'R.1.0.0'. Also, the list of currently defined hook(s) is checked and displayed. 
 
   branch:
     _categories: ["arcv-command-line", "manual"]

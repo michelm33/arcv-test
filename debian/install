@@ -1,6 +1,6 @@
 arcv-cfg.yml /usr/bin/arcv-test
 arcv-test /usr/bin/arcv-test
-arcv-test.8 /usr/bin/arcv-test
+arcv-test.1 /usr/bin/arcv-test
 arcv-test-container.yml /usr/bin/arcv-test
 arcv-test__help.sh /usr/bin/arcv-test
 arcv-test-host.yml /usr/bin/arcv-test

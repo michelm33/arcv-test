@@ -1,6 +1,5 @@
 info SRC: /home/michel/test-arcv/test-project
 info REV: 0 (hash 6f4cb673324d4b44081c7055817f7ec7297afa638b82e2c6c8c2b681ae9686e6)
-info Source changed according to new hash 7e445fbda73a12eefddf5847d8cc78dd9d38e98b238a971d1a324b9c73039531
 
 \033[4mChanged:\033[0m
   file_C.txt

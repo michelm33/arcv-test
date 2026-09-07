@@ -16,11 +16,12 @@
 # //////////////////////////////////////////////////////////////////////////////////////////
 #
 ROOT_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-TARGET=/usr/share/man/man8/
+TARGET=/usr/share/man/man1/
 VERSION=$(shell cat VERSION.txt)
 VERSION_DEB=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' VERSION.txt)
 VERSION_DEB_FOR_TARXV=$(shell awk -F'.' '{ printf("%s.%s_%s" ,$$1,$$2,$$3);}' VERSION.txt)
 VERSION_DEB_FOR_ZIP=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' VERSION.txt)
+VERSION_DEB_FOR_DOCK=$(shell awk -F'.' '{ printf("%s.%s.%s" ,$$1,$$2,$$3);}' VERSION.txt)
 VERSION_SHELLAPI=$(shell cat shell-api/VERSION.txt)
 VERSION_DEB_SHELLAPI=$(shell awk -F'.' '{ printf("%s.%s-%s" ,$$1,$$2,$$3);}' shell-api/VERSION.txt)
 
@@ -38,10 +39,10 @@ EMAIL=michel.mehl@slashetc.fr
 all:
 
 .PHONY: man
-man: arcv-test.8 man_install
+man: arcv-test.1 man_install
 
 .PHONY: man_install
-man_install: arcv-test.8
+man_install: arcv-test.1
 	@echo 
 	@echo "#################################"
 	@echo "Installing man pages and building gzip for $(TARGET)/$<"
@@ -50,12 +51,12 @@ man_install: arcv-test.8
 	sudo install -g 0 -o 0 -m 0644 $< $(TARGET)
 	sudo gzip -f $(TARGET)/$<
 
-arcv-test.8: required_help2man FORCE
+arcv-test.1: required_help2man FORCE
 	@echo 
 	@echo "#################################"
 	@echo "Creating manpage with help2man"
 	@echo 
-	export TZ="US/Pacific" && export LC_ALL="C.UTF-8" && export LANG="EN.US.UTF-8" && help2man -L en_EN@euro --no-info --section 8 --name "arcv test tool" --help-option="--man" --output=$@ ./arcv-test
+	export TZ="US/Pacific" && export LC_ALL="C.UTF-8" && export LANG="EN.US.UTF-8" && help2man -L en_EN@euro --no-info --section 1 --name "arcv test tool" --help-option="--man" --output=$@ ./arcv-test
 # --manual="System Administration Utilities"
 
 .PHONY: required_help2man
@@ -142,8 +143,8 @@ build_release: required_tools CHANGELOG.txt COPYRIGHT.txt VERSION.txt
 	@cd $(VERS_REL_DIR) && ls -1|grep -v debian|awk '{ print $$1,"/usr/bin/arcv-test" }' > debian/install
 	@#
 	@echo "----- DEBIAN MANPAGE FILE"
-	@cp arcv-test.8 $(VERS_REL_DIR)/debian/$(PRODUCT).8
-	@echo "debian/arcv-test.8" > $(VERS_REL_DIR)/debian/$(PRODUCT).manpages
+	@cp arcv-test.1 $(VERS_REL_DIR)/debian/$(PRODUCT).1
+	@echo "debian/arcv-test.1" > $(VERS_REL_DIR)/debian/$(PRODUCT).manpages
 	@#
 	@echo "----- CLEANUP EXAMPLE FILES"
 	@rm -rf $(VERS_REL_DIR)/debian/*.ex 2>/dev/null || echo  # example folders
@@ -180,6 +181,27 @@ build_package_cleanup:
 	@echo 
 	@cd $(VERS_REL_DIR)/debian && rm -r .debhelper && rm -rf $(PRODUCT) && rm debhelper* && ([ -f file ] && rm files || echo) && ([ -f rules ] && rm rules || echo) && echo || echo '!!!!!!!!!!!!!!!! FAIL !!!!!!!!!!!!!!!!'
 
+# This takes a lot of space ~144MB
+# Better you a docker build file
+.PHONY: build_docker_image
+build_docker:
+	@echo 
+	@echo 
+	@echo "SAVING DOCKER IMAGE"
+	@echo slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK)
+	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
+	@echo 
+	@cd $(VERS_REL_DIR) && sudo docker tag arcv-test-ubuntu26 slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) && sudo docker save slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) | gzip > arcv-test-ubuntu26.tar.gz
+
+.PHONY: import_docker
+import_docker:
+	@echo 
+	@echo 
+	@echo "LOADING DOCKER IMAGE"
+	@echo slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK)
+	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
+	@echo 
+	@cd $(VERS_REL_DIR) && zcat arcv-test-ubuntu26.tar.gz | sudo docker load
 
 .PHONY: update_website_ftp
 update_website_ftp:
