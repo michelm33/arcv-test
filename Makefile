@@ -77,7 +77,7 @@ release: required_tools man release_no_man_internal
 	@echo SUCCESS
 
 .PHONY: release_no_man_internal
-release_no_man_internal: check_uptodate create_package update_website_ftp
+release_no_man_internal: check_uptodate create_package ftp
 	@echo SUCCESS
 
 .PHONY: export
@@ -159,7 +159,6 @@ create_package: build_release build_package build_package_cleanup
 	@echo "FINISHED"
 	@echo 
 
-# an alias for update_website_ftp
 .PHONY: package
 package : create_package
 
@@ -181,9 +180,37 @@ build_package_cleanup:
 	@echo 
 	@cd $(VERS_REL_DIR)/debian && rm -r .debhelper && rm -rf $(PRODUCT) && rm debhelper* && ([ -f file ] && rm files || echo) && ([ -f rules ] && rm rules || echo) && echo || echo '!!!!!!!!!!!!!!!! FAIL !!!!!!!!!!!!!!!!'
 
+.PHONY: ftp_docker
+ftp_docker: build_docker
+	@echo 
+	@echo "UPLOADING DOCKER IMAGE"
+	@echo "arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz"
+	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
+	@echo 
+	@sumo -y ftp://slash2438072@ftp.slashetc.fr $$HOME/mnt/ftp.slashetc.fr
+	rsync -T /tmp -rv --no-group --no-perms --no-owner --copy-links --progress --out-format=%n --modify-window=1 arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz $$HOME/mnt/ftp.slashetc.fr/download/
+	rm arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz
+	@sumo -u $$HOME/mnt/ftp.slashetc.fr
+
+.PHONY: install_docker
+install_docker: ftp_docker_get import_docker
+	@echo 
+	@echo "CLEANUP DOWNLOADED DOCKER IMAGE"
+	echo rm arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz
+
+.PHONY: ftp_docker_get
+ftp_docker_get: 
+	@echo 
+	@echo "DOWNLOADING DOCKER IMAGE"
+	@echo "arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz"
+	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
+	@echo 
+	wget https://slashetc.fr/download/arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz
+
+
 # This takes a lot of space ~144MB
 # Better you a docker build file
-.PHONY: build_docker_image
+.PHONY: build_docker
 build_docker:
 	@echo 
 	@echo 
@@ -191,7 +218,7 @@ build_docker:
 	@echo slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK)
 	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
 	@echo 
-	@cd $(VERS_REL_DIR) && sudo docker tag arcv-test-ubuntu26 slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) && sudo docker save slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) | gzip > arcv-test-ubuntu26.tar.gz
+	sudo docker tag arcv-test-ubuntu26 slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) && sudo docker save slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK) | gzip > arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz
 
 .PHONY: import_docker
 import_docker:
@@ -201,10 +228,10 @@ import_docker:
 	@echo slashetc/arcv-test-ubuntu26:$(VERSION_DEB_FOR_DOCK)
 	@echo "PLEASE WAIT THIS MAY TAKE SOME TIME"
 	@echo 
-	@cd $(VERS_REL_DIR) && zcat arcv-test-ubuntu26.tar.gz | sudo docker load
+	zcat arcv-test-ubuntu26-$(VERSION_DEB_FOR_DOCK).tar.gz | sudo docker load
 
-.PHONY: update_website_ftp
-update_website_ftp:
+.PHONY: ftp
+ftp:
 	@echo 
 	@echo 
 	@echo "UPLOADING TO FTP"
@@ -214,4 +241,4 @@ update_website_ftp:
 
 # an alias for update_website_ftp
 .PHONY: upload
-upload : update_website_ftp
+upload : ftp

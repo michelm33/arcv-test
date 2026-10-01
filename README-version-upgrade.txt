@@ -6,18 +6,21 @@ Changes to apply when changing version:
 - CHANGELOG
 
 - Define shell api dependency
-  * To use latest version of shellapi:
+  * To use latest version, type in current terminal before releae creation:
       unset SHELLAPI_VERSION    # to be sure var is not defined
       <generate a release of shellapi> 
   * To use a version of shellapi different of the current one e.g. v1.1.2 (change to the actual version number):
-      export SHELLAPI_VERSION=1.1-2
+      <Create a symlink of shell-api to the release folder of the version>
+      update update_vernum_in_files.sh and set       
+        SHELLAPI_VERSION=1.1-4 # example
 
 - Define SHOTPLAN dependency
-  * To use latest version of shellapi:
+  * To use latest version, type in current terminal before releae creation:
       unset SHOTPLAN_VERSION    # to be sure var is not defined
       <generate a release of shellapi> 
   * To use a version of shellapi different of the current one e.g. v1.1.2 (change to the actual version number):
-      export SHOTPLAN_VERSION=1.1-1
+      update update_vernum_in_files.sh and set 
+        SHOTPLAN_VERSION=1.1-1 # example
 
 - Generate a release :
     make release

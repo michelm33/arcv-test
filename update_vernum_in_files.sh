@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: update_vernum_in_files.sh
-# Release file date: 2026-09-06 23:46
-# App version: 1.2.1
-# App source revision: 239
-# App source signature: 73f3ec4cf9055d6eb78ae7ed07fc259d1c9cecf2ff1bdf70ecf5f69b51b4ee1f
-# Source file last modification: 2026-08-21 16:40:23.687353709 +0200
+# Release file date: 2026-09-30 20:43
+# App version: 1.2.2
+# App source revision: 247
+# App source signature: a0bcc8a89f613120ab2de8c2f0e4d2dc84027ca6bd2bc746b92ae5e8ba99df97
+# Source file last modification: 2026-09-30 19:34:21.886883775 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -37,7 +37,7 @@ MYDIR="$(readlink -f "${DIRNAME}")"
 # If this is not the case, the variables may be originally hardcoded
 # here. If the var is defined, the matching VERSION.txt won't be read
 
-#SHOTPLAN_VERSION=1.0-1
+#SHOTPLAN_VERSION=1.1-1
 
 if [ ! -v ARCV_TEST_VERSION ] ; then
     ARCV_TEST_VERSION="$(awk -F'.' '{ printf("%s.%s-%s" ,$1,$2,$3);}' "${MYDIR}/VERSION.txt")"
