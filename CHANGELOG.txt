@@ -1,2 +1,24 @@
-* Updated version to be in line with arcv 1.1.0 
-* First release
+* Release 1.2.2
+
+  Release coming along with arcv 1.2.2
+  No new tests
+
+* Release 1.2.1
+
+  Release coming along with arcv 1.2.1
+
+* Release 1.2.0
+
+  Release coming along with arcv 1.2.0
+
+* Release 1.1.0
+
+  Release coming along with arcv 1.1.0
+
+* Release 1.0.1
+
+  Release coming along with arcv 1.0.1
+
+* Release 1.0.0
+
+  First release coming along with arcv 1.0.0

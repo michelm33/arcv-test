@@ -46,13 +46,9 @@ Changes to apply when changing version:
 
 - Tag the release once the release has been successfully tested:
     av pub
-    The following updates are done automatically if 'av hook tools/update-web.sh' was called
-    * online documentation update
-      [x] make web is called
-      [x] web site page are regenerated using make gensiten (release)
 
 - Export the release to GitHub, for example (change to the actual version number):
-    av export ../release/arcv/arcv-test-1.2-0
+    av export ../release/arcv-test/arcv-test-1.2-0
 
 - Create the tag and related release in GitHub
 

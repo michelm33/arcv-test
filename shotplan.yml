@@ -1785,6 +1785,7 @@ shotplan:
           ?av --silent -y   # init
           ?av --silent -yy pub -m "auto release 1.0.0" || _exit -1 "Failed to create release tag"
           ?av -y --silent co VERSION.txt # We don't want to bother with this file here
+          ?sleep 2
 
       command-display : |
           av diff               # diff between working dir and head revision
@@ -1798,10 +1799,10 @@ shotplan:
       command : | 
           echo "This is the second line of file A" >> "file_A.txt"
           ?av -y --silent -m "Added 2nd line" # revision 2
-          ?sleep 1 # This is needed for the container tests
+          ?sleep 2 # This is needed for the container tests
           echo "This is the third line of file A" >> "file_A.txt"
           ?av -y --silent -m "Added 3rd line" # revision 3          
-          ?sleep 1
+          ?sleep 2
 
           echo "This is the fourth line of file A (not committed)" >> "file_A.txt" # Not committed
 
