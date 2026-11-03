@@ -25,8 +25,6 @@ files:
       src: [ "*.deb", "*.zip" ]
       dst: "/download/"
       copy-options: "-T /tmp -rv --size-only --no-group --no-perms --no-owner --copy-links --progress --out-format=%n --modify-window=1 --delete"
-      filters: 
-        - "exclude%20*#*"
 
   ftp_release_install_script:
     source: localhost
@@ -37,8 +35,6 @@ files:
       # Force always copy by removing --size-only
       # If version only changes in install script, it is not uploaded
       copy-options: "-T /tmp -rv --no-group --no-perms --no-owner --copy-links --progress --out-format=%n --modify-window=1 --delete"
-      filters: 
-        - "exclude%20*#*"
 
 commands:
   copy:

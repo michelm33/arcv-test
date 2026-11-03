@@ -7,4 +7,10 @@ container-files:
   - dock-debug-app 
   - install_arcv-test.sh 
   - dock-run-test-app-auto
+  - mongodb-database-tools-ubuntu2604-x86_64-100.19.1.deb
 restore-arcv-config: /home/michel/riffian/Data/Data/admin/linux/configs/arcv.yml
+
+# To save current updates in container to the image:
+# sudo docker commit "arcv-test-ubuntu26" "arcv-test-ubuntu26"
+
+

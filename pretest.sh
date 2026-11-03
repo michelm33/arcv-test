@@ -6,11 +6,11 @@
 # 
 # License terms written down in file LICENSE.txt
 # Release file path: pretest.sh
-# Release file date: 2026-10-02 05:00
-# App version: 1.2.2
-# App source revision: 251
-# App source signature: 1bb08424eb36952d030fde4b38a351058d8469a796da3cd3861a32f3538a77b3
-# Source file last modification: 2026-08-27 19:19:46.159170472 +0200
+# Release file date: 2026-10-25 20:13
+# App version: 2.0.0
+# App source revision: 270
+# App source signature: d027990262239a4dfb376e7f2438af668e9c5274dc47c401dbbe26dbbe7a2c2a
+# Source file last modification: 2026-10-20 13:45:18.308466200 +0200
 #
 # This header was generated. Do not modify.
 #
@@ -76,6 +76,40 @@ Term__clear()
     :
 }
 EOF
+
+:<<'EOF'
+GLOBAL VARIABLES
+EOF
+
+export TEST_MONGOD_HOST=192.168.0.12
+export TEST_MONGOD_PORT=27018
+export TEST_MONGOD_DB=slashetc
+# The 3 variables below are set up automatically from the above parameters
+export TEST_MONGODB_URI="mongodb://${TEST_MONGOD_HOST}:${TEST_MONGOD_PORT}/${TEST_MONGOD_DB}"
+export TEST_MONGODB_DIR="mongodb-${TEST_MONGOD_DB}@${TEST_MONGOD_HOST}-${TEST_MONGOD_PORT}"
+export TEST_MONGODB_FILE="mongo-db-${TEST_MONGOD_DB}.gz"
+
+createTestCyclicCommits() {
+    local cycle=$1
+    local nbCycles=$2
+
+    local cntCycle=0
+    while [ $cntCycle -lt $nbCycles ] ; do
+        local cnt=0
+        while [ $cnt -lt $cycle ] ; do
+            #echo "Creating cycle_${cntCycle}_rev${cnt}.txt" 
+            echo "${cntCycle}_${cnt}" > "cycle_${cntCycle}_rev${cnt}.txt" 
+            if [ $cntCycle -eq $(($nbCycles -1)) ] && [ $cnt -eq 0 ] ; then
+                av -y --silent --fetch
+            else
+                av -y --silent 
+            fi
+            #pushd "subdir" &>/dev/null &&  av -y --silent && popd &>/dev/null
+            cnt=$(($cnt + 1))
+        done
+        cntCycle=$(($cntCycle + 1))
+    done
+}
 
 recreateTestSourceDirWithSpaces()
 {

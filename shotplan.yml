@@ -562,7 +562,7 @@ shotplan:
         ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/file_A.txt"
         ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/file_B.txt"
         ?Test__assertFilesShouldNotExist "${REPODIR}/test-project.archive/test-project.archive2/test-project/test_report.txt"
-        ?Test__assertFileContent "${REPODIR}/test-project.archive/test-project.archive2/DROPPED" "- test-project/file_A.txt"
+        ?Test__assertFileContent "${REPODIR}/test-project.archive/test-project.archive2/DROPPED" "- /file_A.txt"
         ?echo          
         av rev  
         ?echo
@@ -1070,6 +1070,431 @@ shotplan:
           - Head rev is checked out into '/tmp'
           - It is checked that the last lines of file A and B are the one added lastly
 
+
+  source-uri:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Manage revision control of data fetched from a MongoDB URI
+    _usage: |
+      arcv --source=<MongoDB URI> [--fetch|--fetch-only]
+    1:
+      name: Example of fetching a MongoDB dump from a random URI into a source folder without any revision control
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "/tmp/" 
+      command-display : | 
+        av --source=${TEST_MONGODB_URI} --fetch-only
+      command : | 
+        av -y --source=${TEST_MONGODB_URI} --fetch-only || _exit -1 "Error: fetch from mongodb URI failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFilesShouldExist "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz"
+        Test__assertFileSizeGreaterThan "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz" 0
+        ?rm -r "/tmp/${TEST_MONGODB_DIR}"
+      comment: |
+        A MongoDB dump is generated inside a source folder but without creating an entry in the repository.
+        The source folder contains a compressed archive file of the matching
+        database ('slashetc'), and its name should be mongo-db-slashetc.gz 
+        inside ${TEST_MONGODB_DIR} which name is of a predefined format according to the URI components.        
+
+    2:
+      name: Example of initiating revision control for a MongoDB dump fetched from an URI
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "/tmp/" 
+      command-display : | 
+        av --source=${TEST_MONGODB_URI} --fetch
+      command : | 
+        av -y --source=${TEST_MONGODB_URI} --fetch || _exit -1 "Error: check in of mongodb URI failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFilesShouldExist "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz"
+        ?Test__assertFileSizeGreaterThan "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz" 0
+        
+        # Go inside the source and perform some revision checks
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+        ?Test__assertCmd "av rev" "0"
+        ?Test__assertCmdExit 0 "av check"
+        ?Test__assertCmdExit 0 "av diff"
+      comment: |
+        A source folder is created and checked in from a mongodb URI.
+        The source folder contains a compressed archive file of the matching
+        database ('slashetc'), and its name should be mongo-db-slashetc.gz inside the ${TEST_MONGODB_DIR} which is formatted
+        according to the URI components. 
+        Using command 'rev', 'check' and 'diff', it is verified that the mongo dump file has been put under revision control.
+        
+    3:
+      name: Example of adding a new revision directly from the MongoDB URI without requiring an existing local source
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av --source=${TEST_MONGODB_URI} --fetch
+      command : | 
+        av -y --source=${TEST_MONGODB_URI} --fetch || _exit -1 "Error: check in of mongodb URI failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFilesShouldExist "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz"
+        ?Test__assertFileSizeGreaterThan "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz" 0
+        
+        # Go inside the source and perform some revision checks
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+        ?Test__assertCmd "av rev" "1"
+        ?Test__assertCmdExit 0 "av check"
+        ?Test__assertCmdExit 0 "av diff"
+      comment: |
+        A new revision can be created using the exact same command as that one used to initiate the repository by specifying the MongoDB URI as explicit source. 
+        If the source folder does not exit yet, the head will be checked out beforehand.
+        Using command 'rev', 'check' and 'diff', it is verified that a revision 1 of the mongo dump file was created.    
+
+    4:
+      name: Example of adding a new revision from an existing local source folder by explictly requesting to fetch a new dump
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+      command-display : | 
+        av --fetch
+      command : | 
+        av -y -m "database update" --fetch || _exit -1 "Error: check in of mongodb URI failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertFilesShouldExist "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz"
+        ?Test__assertFileSizeGreaterThan "/tmp/${TEST_MONGODB_DIR}/mongo-db-slashetc.gz" 0
+        ?Test__assertCmd "av rev" "2"
+        ?Test__assertCmdExit 0 "av check"
+        ?Test__assertCmdExit 0 "av diff"
+        #av changelog --fmt=plain
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/source-uri-3-1.txt" "av changelog --fmt=plain|filter-changelog.sh"
+      comment: |
+        In the continuation of the previous step, we request to update and commit the MongoDB source folder using the --fetch option.
+        Since the MongoDB dumps are not deterministic, this will result in the creation of new revision.
+        Using command 'rev', 'check' and 'diff', it is verified that the mongo dump file has been put under revision control.
+
+    5:
+      name: Example of creating a new revision directly from the MongoDB URI and cleaning up the folder afterwards
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av --source=${TEST_MONGODB_URI} --fetch --rm 
+      command : | 
+        av -y --source=${TEST_MONGODB_URI} --fetch --rm || _exit -1 "Error: check in of mongodb URI failed" 
+      post-command-display:
+      post-command: |
+        ?sleep 1
+        ?Test__assertDirsShouldNotExist "/tmp/${TEST_MONGODB_DIR}" 
+        ?Test__assertCmd "av list|filter-sourcelist.sh ${TEST_MONGODB_DIR}" "3"
+        ?rm -r "${REPODIR}/${TEST_MONGODB_DIR}.archive"
+      comment: |
+        A new revision is created using a direct fetch commit via --source set to the MongoDB URI as explicit source and requesting the cleanup of the folder used to perform the check-in
+        The folder /tmp/${TEST_MONGODB_DIR} should not exist, but revision 3 is actually available in the repository.
+        This is checked by verifying of the output of the 'list' command.  
+
+  push-uri:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Pushing back/restoring data fetched from a MongoDB URI under revision control
+    _usage: |
+      arcv [--source=<MongoDB URI>] push [REVISION | RELEASE TAG]
+    1:
+      name: Example of initiating revision control for a MongoDB dump fetched from an URI
+      pre-command: |
+        ?source pretest.sh
+        ?Test__assertChangeDir "/tmp/" 
+        av -y --silent --source=${TEST_MONGODB_URI} --fetch || _exit -1 "Error: check in of mongodb URI failed" 
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+        av -y --silent --fetch || _exit -1 "Error: check in of mongodb URI failed"
+        av -yy pub -m "1.0.0 from rev 1" 
+        av -y --silent --fetch || _exit -1 "Error: check in of mongodb URI failed"
+      command-display : | 
+        av push [--source=${TEST_MONGODB_URI}] [<revision> | <release tag>]
+      command : | 
+        av push -y
+      post-command-display:
+      post-command: |
+        ?sleep 1
+
+        av -y push 1
+        av -y push R1.0.0
+        ?Test__assertChangeDir "$HOME"
+        av -y --source=${TEST_MONGODB_URI} push R1.0.0
+
+        ?sleep 1
+        ?rm -r "${REPODIR}/${TEST_MONGODB_DIR}.archive"
+        ?rm -r "/tmp/${TEST_MONGODB_DIR}"
+
+      comment: |
+        Various push scenarios are executed from a source folder created from a mongodb URI with 3 commits and 1 tag.
+        In detail:
+        - data of current source is pushed
+        - data of revision 1 is pushed from current source
+        - data of release R1.0.0 pointing to revision 1 is pushed
+        - data of release R1.0.0 is pushed from a random location passing explicitly the URI to --source
+        Note that at first glance, this tests is not an absolute evidence of good nominal functioning. It would be necessary to set up specific DB records for each revision in order to the correct revision is pushed. 
+        The predicate is here that since the checkout has been thoroughly tested, it can be assumed that the correct dump file will be imported back to the database, provided the standard output has been checked for correctness regarding the performed checkouts
+
+  circular:
+    _categories: ["arcv-command-line", "manual"]
+    #input: TEST_MONGODB_URI
+    _title: |
+      Circular revisions
+    _usage: |
+        arcv --cycle=<number of revisions> 
+    1:
+      name: Example of committing revisions with a circular history
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av --cycle=<CYCLE>
+      command : | 
+        ?av -y  --silent --source=${TEST_MONGODB_URI} --fetch --cycle=3 
+      post-command-display:
+      post-command: |
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+
+        ?echo "file 1" >> file_1.txt ; av -y --silent -m "Added file_1.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive1/${TEST_MONGODB_DIR}/file_1.txt" "file 1"
+        ?Test__assertCmd "ls -1 ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive1/${TEST_MONGODB_DIR}" "file_1.txt"
+
+        ?echo "file 2" >> file_2.txt ; av -y --silent -m "Added file_2.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive2/${TEST_MONGODB_DIR}/file_2.txt" "file 2"
+        ?Test__assertCmd "pushd ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive2/${TEST_MONGODB_DIR}/ &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt"
+
+        # From here on we should wrap from 0
+        #
+        ?echo "file 3" >> file_3.txt ; av -y --silent -m "Added file_3.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/file_3.txt" "file 3"
+        ?Test__assertCmd "pushd ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/ &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt"
+        # There should be no archive 3
+        ?Test__assertDirsShouldNotExist "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive3"
+        
+        ?echo "file 4" >> file_4.txt ; av -y --silent -m "Added file_4.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive1/${TEST_MONGODB_DIR}/file_4.txt" "file 4"
+        ?Test__assertCmd "pushd ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive1/${TEST_MONGODB_DIR}/ &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt file_4.txt"
+
+        ?echo "file 5" >> file_5.txt ; av -y --silent -m "Added file_5.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive2/${TEST_MONGODB_DIR}/file_5.txt" "file 5"
+        ?Test__assertCmd "pushd ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive2/${TEST_MONGODB_DIR}/ &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt file_4.txt file_5.txt"
+
+        # From here on second wrap from 0
+        #
+
+        ?echo "file 6" >> file_6.txt ; av -y --silent -m "Added file_6.txt"
+        ?Test__assertFileContent "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/file_6.txt" "file 6"
+        ?Test__assertCmd "pushd ${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/ &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt file_4.txt file_5.txt file_6.txt"
+
+      comment: |
+        Check-ins are done with a source folder configured with circular revision history of max 3 revision at init.
+        In details:
+        - files file_X.txt with X from 1 ot 6 are respectively commited.
+        - at each step, the content of the revision archive folder is checked there's exactly 1 file there corresponding to the commit
+        - From 3rd commit where file_3.txt is checked in, the revision archive wrapped to 0
+        - From 6th commit where file_6.txt is checked in, the revision archive wrapped to 0 a second time
+
+    2:
+      name: Example of checking out head of a source with circular history
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av [ -o <dest dir> ] co 
+      command : | 
+        av -o /tmp --source=${TEST_MONGODB_DIR} co
+      post-command-display:
+      post-command: |
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_1.txt" "file 1"
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_2.txt" "file 2"
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_3.txt" "file 3"
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_4.txt" "file 4"
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_5.txt" "file 5"
+        ?Test__assertFileContent "/tmp/${TEST_MONGODB_DIR}/file_6.txt" "file 6"
+      comment: |
+        In the continuation of the previous step, the head is checked out. It is checked that all 6 files are there.
+
+    3:
+      name: Example of checking out a specific revision of a source with circular history
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av [ -o <dest dir> ] co <revision>
+      command : | 
+        # Last revision is 0 where there should be all files
+        av -y -o /tmp --source=${TEST_MONGODB_DIR} co 0
+        ?Test__assertCmd "pushd /tmp/${TEST_MONGODB_DIR}-rev0 &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt file_4.txt file_5.txt file_6.txt"
+
+        # Previous to revision 0 , it is 2, there should be 5 files
+        av -y -o /tmp --source=${TEST_MONGODB_DIR} co 2
+        ?Test__assertCmd "pushd /tmp/${TEST_MONGODB_DIR}-rev2 &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_1.txt file_2.txt file_3.txt file_4.txt file_5.txt"
+
+        # Remove file 1 and 4 already added in previous round. When commit revision 1, there should be all files except 1 et 4.
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+        ?rm file_1.txt ; rm file_4.txt ; av -y --silent -m "Removed file_1.txt and file_4.txt"
+        av -y -o /tmp --source=${TEST_MONGODB_DIR} co 1
+        ?Test__assertCmd "pushd /tmp/${TEST_MONGODB_DIR}-rev1 &>/dev/null && ls -1 file_*|xargs echo && popd &>/dev/null" "file_2.txt file_3.txt file_5.txt file_6.txt"
+
+      post-command-display:
+      post-command: |
+        # Cleanup source + repo
+        ?rm -r "/tmp/${TEST_MONGODB_DIR}" 2> /dev/null || true
+        ?[ -d "${REPODIR}/${TEST_MONGODB_DIR}.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/${TEST_MONGODB_DIR}.archive" || true
+      comment: |
+        In the continuation of the previous step, the revisions 0 and 4 are checked out and it is checked that all expected files are there.
+        In detail:
+        - the revision 0 is checked out. It is checked that all 6 files are there.
+        - the revision 4 is checked out. It is checked that 4 files from 1 to 4 are there, no other
+
+  circular-save:
+    _categories: ["arcv-command-line", "manual"]
+    #input: TEST_MONGODB_URI
+    _title: |
+      Circular revisions with cycles backup
+    _usage: |
+        arcv --cycle=<number of revisions> 
+    1:
+      name: Example of circular revisions with a cycle backup
+      pre-command: |
+        ?source pretest.sh
+        Test__assertChangeDir "/tmp/"
+      command-display : | 
+        av --cycle=<CYCLE>+
+      command : | 
+        ?av -y  --silent --source=${TEST_MONGODB_URI} --fetch --cycle=3+
+      post-command-display:
+      post-command: |
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}"
+        ?echo "Creating the source with a revision cycle of 3 with cycle backup"
+        ?createTestCyclicCommits 3 2
+        ?Test__assertCmd "av rev" "0" # There were exactly 2 wraparounds
+
+        # Test the last fetched mongoDB file should be found in all 3 revisions at last
+        ?Test__assertSameFiles "between rev 0 and rev1" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive1/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}"
+        ?Test__assertSameFiles "between rev 0 and rev2" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive2/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}"
+
+        # Test the last fetched mongoDB file should be found only the last cyclic backup
+        ?Test__assertSameFiles "between rev 0 and cycle rev1" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}" "${REPODIR}/${TEST_MONGODB_DIR}-cycles.archive/${TEST_MONGODB_DIR}-cycles.archive1/${TEST_MONGODB_DIR}-cycles/${TEST_MONGODB_FILE}"
+        ?Test__assertNotSameFiles "between rev 0 and cycle rev0" "${REPODIR}/${TEST_MONGODB_DIR}.archive/${TEST_MONGODB_DIR}.archive0/${TEST_MONGODB_DIR}/${TEST_MONGODB_FILE}" "${REPODIR}/${TEST_MONGODB_DIR}-cycles.archive/${TEST_MONGODB_DIR}-cycles.archive0/${TEST_MONGODB_DIR}-cycles/${TEST_MONGODB_FILE}"
+
+
+        av co 0 --source="${TEST_MONGODB_DIR}-cycles" -o /tmp
+        av co --source="${TEST_MONGODB_DIR}-cycles" -o /tmp
+        ?Test__assertChangeDir "/tmp/${TEST_MONGODB_DIR}-cycles"
+        ?Test__assertCmdExit 0 "av -y --silent" # This is to register the folder as valid source to allow call 'av rev'
+        ?Test__assertCmd "av rev" "1" # There's exactly 1 revision
+        ?Test__assertCmd "ls -1 .|xargs echo" "cycle_0_rev0.txt cycle_0_rev1.txt cycle_0_rev2.txt cycle_1_rev0.txt cycle_1_rev1.txt cycle_1_rev2.txt ${TEST_MONGODB_FILE}"
+
+        ?Test__assertFileContent "cycle_0_rev0.txt" "0_0"
+        ?Test__assertFileContent "cycle_0_rev1.txt" "0_1"
+        # From here, first wrap around
+        ?Test__assertFileContent "cycle_0_rev2.txt" "0_2"
+        ?Test__assertFileContent "cycle_1_rev0.txt" "1_0"
+        ?Test__assertFileContent "cycle_1_rev1.txt" "1_1"
+        # From here, 2nd wrap around
+        ?Test__assertFileContent "cycle_1_rev2.txt" "1_2"
+        ?Test__assertNotSameFiles "between rev0 and rev 1 of DB dump file" "${TEST_MONGODB_FILE}"  "/tmp/${TEST_MONGODB_DIR}-cycles-rev0/${TEST_MONGODB_FILE}"
+
+        # Cleanup source + repo
+        ?rm -r "/tmp/${TEST_MONGODB_DIR}"* 2> /dev/null || true
+        ?[ -d "${REPODIR}/${TEST_MONGODB_DIR}.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/${TEST_MONGODB_DIR}.archive" || true
+        ?rm -r "/tmp/${TEST_MONGODB_DIR}-cycles"* 2> /dev/null || true
+        ?[ -d "${REPODIR}/${TEST_MONGODB_DIR}-cycles.archive" ] && ${__SUDO__}rm -rf "${REPODIR}/${TEST_MONGODB_DIR}-cycles.archive" || true
+
+      comment: |
+        Check-ins are done with a source folder configured with circular revision history of max 3 revisions and cycle backup activated.
+        In details:
+        - After init, 6 commits are done with files cycle_X_file_Y.txt with X in [0-1] and Y in [0-2]. The mongoDB is fetched for rev 1 of 2nd cycle
+        - At the end of the cycle, cycle backup repository is checked out and it is checked head is revision 1 since 2 cycles were completed.
+        - It's checked that the cycle backup contains all files cycle_X_revY.txt and their content is checked
+        - The mongo dump file is different between cycle backup rev 0 and 1
+        - The last fetched mongo dump file should be found in all 3 circular revisions since rev 1, rev 2 and finally rev 0 were committed in second cycle and should be equal to the last committed in cyclic backup
+
+  commitinterval:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Restrict time interval between two commits
+    _usage: |
+          arcv --interval=( <N>d | <N>h | <N>m | <N>s )
+    1:
+      name: Example of restricting the time interval between two commits
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+      command-display : | 
+          arcv --interval=5s
+      command : | 
+          arcv --silent -yy --interval=5s
+      post-command-display:
+      post-command: |
+        ?Test__assertCmd "av rev" "0"
+        ?echo A > "file_A.txt"
+        ?Test__assertCmdExit 127 "av --silent  -ym 'A'"
+        ?echo && echo "sleeping 5s" && sleep 5
+        ?Test__assertCmdExit 0 "av --silent  -ym 'A'"
+
+        ?echo && echo "sleeping 2s" && sleep 2
+        ?echo B > "file_B.txt"
+        ?Test__assertCmdExit 127 "av --silent  -ym 'B'"
+        ?echo && echo "sleeping 4s" && sleep 4
+        ?Test__assertCmdExit 0 "av --silent -ym 'B'"
+        ?cleanupTestSourceDir
+      comment: |
+        This test initiates a simple revision control with a minimum interval of 5s between two commits.
+        In detail:
+          - An attempt to commit a file A immediately after init.
+            Commit shouldn't be allowed and return code is 127 
+          - After 5s sleep, commit of A is attempted anew, this time successful
+          - After 2s sleep, an attempt to commit a file B immediately afterwards
+            Commit shouldn't be allowed and return code is 127 
+          - After 4s sleep, commit of B is attempted anew, this time successful
+
+
+  forcecommit:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Force creation of a new revision even when there's no change
+    _usage: |
+      arcv --force
+    1:
+      name: Example of restricting the time interval between two commits
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        arcv --silent -y
+      command-display : | 
+        arcv --force
+      command : | 
+        arcv -y --force -m "no change commit"
+      post-command-display:
+      post-command: |
+        ?Test__assertCmd "av rev" "1"
+        ?arcv --silent -y
+        ?arcv --silent -y
+        ?Test__assertCmd "av rev" "1"
+        ?arcv --silent -y --force -m "no change commit"
+        ?Test__assertCmd "av rev" "2"
+        ?echo A > "file_A.txt"
+        ?Test__assertCmdExit 0 "av --silent -ym 'added A file'"
+        ?Test__assertCmd "av rev" "3"
+        ?arcv --silent -y
+        ?Test__assertCmd "av rev" "3"
+        ?arcv --silent -y --force -m "no change commit"
+        ?Test__assertCmd "av rev" "4"
+
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/forcecommit-1-1.txt" "av changelog --fmt=plain|filter-changelog.sh"
+
+        ?Test__assertCmdExit 0 "av co 1 -o /tmp"
+        ?Test__assertDirsShouldExist "/tmp/test-project-rev1" 
+        ?Test__assertFilesShouldNotExist "/tmp/test-project-rev1/A" 
+
+        ?cleanupTestSourceDir
+      comment: |
+
+
   displaylog:
     _categories: ["arcv-command-line", "manual"]
     _title: |
@@ -1391,6 +1816,66 @@ shotplan:
       post-command: |
       comment: |
         In the continuation of the 'displayreleaselog' test, the release history is shown as a terminal menu, where differences can be checked either with the previous release or with the head revision.
+
+
+
+  displaychangelog:
+    _categories: ["arcv-command-line", "manual"]
+    _title: |
+      Display log history since last release
+    _usage: |
+        arcv changelog
+    1:
+      name: Example of change log from a certain release tag
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "this is the content of 1st file" > "file_no_1.txt" ; echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_1.txt" >/dev/null
+        ?echo "this is the content of 2nd file" > "file_no_2.txt" ; echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_2.txt" >/dev/null
+
+        ?av --silent -yy pub -m "Release 1.0.0" || _exit -1 "Failed to create release tag"
+
+        ?echo "this is the content of 3th file" > "file_no_3.txt" ; echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_3.txt" >/dev/null
+        ?echo "this is the content of 4th file" > "file_no_4.txt" ; echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_4.txt" >/dev/null
+      command-display : | 
+        av changelog
+      command : | 
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/changelog-1-1.txt" "av changelog --fmt=plain|filter-changelog.sh"
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        The change log from last release is displayed
+        An initial folder is put is put under version control and 
+        then 4 successive commits are done with log 'Added file_no_<iter>.txt'
+        where 'iter' ranges from 1 to 4. 
+        A release is created from revision 2.
+        The change log is displayed and shall contain the logs for the release commit
+        itself (VERSION.txt), as well as the logs for file 2 and 3 
+    2:
+      name: Example of change log when some revisions exist but no release tag
+      pre-command: |
+        ?source pretest.sh recreate
+        ?Test__assertChangeDir "$HOME/test-arcv/test-project"
+        ?av -y --silent  >/dev/null
+        ?echo "this is the content of 1st file" > "file_no_1.txt" ; echo "stamp 1 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_1.txt" >/dev/null
+        ?echo "this is the content of 2nd file" > "file_no_2.txt" ; echo "stamp 2 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_2.txt" >/dev/null
+        ?echo "this is the content of 3th file" > "file_no_3.txt" ; echo "stamp 3 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_3.txt" >/dev/null
+        ?echo "this is the content of 4th file" > "file_no_4.txt" ; echo "stamp 4 for file A" >> file_A.txt ; av -y --silent -m "Added file_no_4.txt" >/dev/null
+      command-display : | 
+        av changelog
+      command : | 
+        ?Test__assertCmdOutput "${ARCV_TEST_DIR}/ref-output/changelog-2-1.txt" "av changelog --fmt=plain|filter-changelog.sh"
+      post-command-display:
+      post-command: |
+        ?cleanupTestSourceDir
+      comment: |
+        The change log from revision 0 is shown in absence of release tag
+        An initial folder is put is put under version control and 
+        then 4 successive commits are done with log 'Added file_no_<iter>.txt'
+        where 'iter' ranges from 1 to 4. 
+        The change log is displayed and shall contain the logs for all revisions
 
   displayhash:
     _categories: ["arcv-command-line", "manual"]

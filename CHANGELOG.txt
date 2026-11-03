@@ -1,3 +1,9 @@
+* Release 2.0.0
+
+  Release coming along with arcv 2.0.0
+  
+  New tests: checksource-uri , push-uri, circular, circular-save  changelog, commitinterval
+
 * Release 1.2.2
 
   Release coming along with arcv 1.2.2
